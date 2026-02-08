@@ -1,0 +1,18 @@
+name: License Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-license:
+    name: Verify License
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check LICENSE.md exists
+        run: test -f LICENSE.md
+
+      - name: Check Cargo.toml license field
+        run: grep -q 'license = "GCOSL-1.0"' backend/Cargo.toml
