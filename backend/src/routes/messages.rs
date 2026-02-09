@@ -25,14 +25,19 @@ pub async fn list_messages(
         .ok_or_else(|| AppError::NotFound("Task not found".into()))?;
 
     // Only requester and assigned doer can view messages
-    if task.requester_id != auth_user.user_id
-        && task.assigned_doer_id != Some(auth_user.user_id)
-    {
+    if task.requester_id != auth_user.user_id && task.assigned_doer_id != Some(auth_user.user_id) {
         return Err(AppError::Forbidden("Not a participant in this task".into()));
     }
 
     // Messages only available post-assignment
-    let allowed_statuses = ["assigned", "in_progress", "submitted", "completed", "disputed", "resolved"];
+    let allowed_statuses = [
+        "assigned",
+        "in_progress",
+        "submitted",
+        "completed",
+        "disputed",
+        "resolved",
+    ];
     if !allowed_statuses.contains(&task.status.as_str()) {
         return Err(AppError::BadRequest(
             "Messages only available after task assignment".into(),
@@ -63,9 +68,7 @@ pub async fn send_message(
         .ok_or_else(|| AppError::NotFound("Task not found".into()))?;
 
     // Only requester and assigned doer can send messages
-    if task.requester_id != auth_user.user_id
-        && task.assigned_doer_id != Some(auth_user.user_id)
-    {
+    if task.requester_id != auth_user.user_id && task.assigned_doer_id != Some(auth_user.user_id) {
         return Err(AppError::Forbidden("Not a participant in this task".into()));
     }
 
@@ -79,11 +82,8 @@ pub async fn send_message(
 
     // Content moderation — reject sexual/prohibited, strip contact info
     let moderation = moderate_content(&req.body);
-    match moderation {
-        ModerationResult::Rejected(reason) => {
-            return Err(AppError::ContentRejected(reason));
-        }
-        _ => {}
+    if let ModerationResult::Rejected(reason) = moderation {
+        return Err(AppError::ContentRejected(reason));
     }
 
     // Strip contact info from messages (hard-coded policy: no pre-acceptance contact exchange)

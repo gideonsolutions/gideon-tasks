@@ -76,18 +76,15 @@ pub async fn create_application(
     }
 
     // Check for duplicate application
-    let existing: Option<Uuid> = sqlx::query_scalar(
-        "SELECT id FROM task_applications WHERE task_id = $1 AND doer_id = $2",
-    )
-    .bind(task_id)
-    .bind(auth_user.user_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let existing: Option<Uuid> =
+        sqlx::query_scalar("SELECT id FROM task_applications WHERE task_id = $1 AND doer_id = $2")
+            .bind(task_id)
+            .bind(auth_user.user_id)
+            .fetch_optional(&state.db)
+            .await?;
 
     if existing.is_some() {
-        return Err(AppError::Conflict(
-            "Already applied to this task".into(),
-        ));
+        return Err(AppError::Conflict("Already applied to this task".into()));
     }
 
     // Moderate application message if present

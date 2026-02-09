@@ -19,6 +19,7 @@ pub enum AppError {
     #[error("Conflict: {0}")]
     Conflict(String),
 
+    #[allow(dead_code)]
     #[error("Rate limited: {0}")]
     RateLimited(String),
 

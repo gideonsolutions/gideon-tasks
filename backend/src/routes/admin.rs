@@ -55,9 +55,7 @@ pub async fn approve_moderation(
         .ok_or_else(|| AppError::NotFound("Task not found".into()))?;
 
     if task.status != "pending_review" {
-        return Err(AppError::BadRequest(
-            "Task is not pending review".into(),
-        ));
+        return Err(AppError::BadRequest("Task is not pending review".into()));
     }
 
     sqlx::query("UPDATE tasks SET status = 'published', updated_at = now() WHERE id = $1")
@@ -87,7 +85,9 @@ pub async fn approve_moderation(
     )
     .await?;
 
-    Ok(Json(serde_json::json!({ "message": "Task approved and published" })))
+    Ok(Json(
+        serde_json::json!({ "message": "Task approved and published" }),
+    ))
 }
 
 /// Reject flagged content.
@@ -109,9 +109,7 @@ pub async fn reject_moderation(
         .ok_or_else(|| AppError::NotFound("Task not found".into()))?;
 
     if task.status != "pending_review" {
-        return Err(AppError::BadRequest(
-            "Task is not pending review".into(),
-        ));
+        return Err(AppError::BadRequest("Task is not pending review".into()));
     }
 
     sqlx::query(
@@ -271,7 +269,9 @@ pub async fn resolve_dispute(
     )
     .await?;
 
-    Ok(Json(serde_json::json!({ "message": format!("Dispute resolved: {}", req.resolution) })))
+    Ok(Json(
+        serde_json::json!({ "message": format!("Dispute resolved: {}", req.resolution) }),
+    ))
 }
 
 #[derive(Debug, Deserialize)]

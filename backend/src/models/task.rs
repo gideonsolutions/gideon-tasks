@@ -53,25 +53,8 @@ impl TaskStatus {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "draft" => Some(Self::Draft),
-            "pending_review" => Some(Self::PendingReview),
-            "published" => Some(Self::Published),
-            "assigned" => Some(Self::Assigned),
-            "in_progress" => Some(Self::InProgress),
-            "submitted" => Some(Self::Submitted),
-            "completed" => Some(Self::Completed),
-            "disputed" => Some(Self::Disputed),
-            "resolved" => Some(Self::Resolved),
-            "cancelled" => Some(Self::Cancelled),
-            "expired" => Some(Self::Expired),
-            "rejected" => Some(Self::Rejected),
-            _ => None,
-        }
-    }
-
     /// Is this a terminal state?
+    #[allow(dead_code)]
     pub fn is_terminal(&self) -> bool {
         matches!(
             self,
@@ -93,11 +76,9 @@ impl TaskStatus {
             Self::Submitted => matches!(target, Self::Completed | Self::Disputed),
             Self::Disputed => matches!(target, Self::Resolved),
             // Terminal states allow no transitions
-            Self::Completed
-            | Self::Resolved
-            | Self::Cancelled
-            | Self::Expired
-            | Self::Rejected => false,
+            Self::Completed | Self::Resolved | Self::Cancelled | Self::Expired | Self::Rejected => {
+                false
+            }
         };
 
         if allowed {
@@ -112,7 +93,29 @@ impl TaskStatus {
     }
 }
 
+impl std::str::FromStr for TaskStatus {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "draft" => Ok(Self::Draft),
+            "pending_review" => Ok(Self::PendingReview),
+            "published" => Ok(Self::Published),
+            "assigned" => Ok(Self::Assigned),
+            "in_progress" => Ok(Self::InProgress),
+            "submitted" => Ok(Self::Submitted),
+            "completed" => Ok(Self::Completed),
+            "disputed" => Ok(Self::Disputed),
+            "resolved" => Ok(Self::Resolved),
+            "cancelled" => Ok(Self::Cancelled),
+            "expired" => Ok(Self::Expired),
+            "rejected" => Ok(Self::Rejected),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Location type for tasks.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LocationType {
@@ -120,6 +123,7 @@ pub enum LocationType {
     Remote,
 }
 
+#[allow(dead_code)]
 impl LocationType {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -127,12 +131,15 @@ impl LocationType {
             Self::Remote => "remote",
         }
     }
+}
 
-    pub fn from_str(s: &str) -> Option<Self> {
+impl std::str::FromStr for LocationType {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "in_person" => Some(Self::InPerson),
-            "remote" => Some(Self::Remote),
-            _ => None,
+            "in_person" => Ok(Self::InPerson),
+            "remote" => Ok(Self::Remote),
+            _ => Err(()),
         }
     }
 }
@@ -159,8 +166,9 @@ pub struct Task {
 }
 
 impl Task {
+    #[allow(dead_code)]
     pub fn parsed_status(&self) -> Option<TaskStatus> {
-        TaskStatus::from_str(&self.status)
+        self.status.parse().ok()
     }
 }
 

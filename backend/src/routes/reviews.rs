@@ -21,7 +21,7 @@ pub async fn create_review(
     Path(task_id): Path<Uuid>,
     Json(req): Json<CreateReviewRequest>,
 ) -> AppResult<impl IntoResponse> {
-    req.validate().map_err(|e| AppError::BadRequest(e))?;
+    req.validate().map_err(AppError::BadRequest)?;
 
     let task = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE id = $1")
         .bind(task_id)
@@ -47,7 +47,9 @@ pub async fn create_review(
     // 7-day review window
     let review_deadline = task.updated_at + Duration::days(7);
     if Utc::now() > review_deadline {
-        return Err(AppError::BadRequest("Review window has closed (7 days)".into()));
+        return Err(AppError::BadRequest(
+            "Review window has closed (7 days)".into(),
+        ));
     }
 
     // Determine reviewee
@@ -59,18 +61,15 @@ pub async fn create_review(
     };
 
     // Check for duplicate review
-    let existing: Option<Uuid> = sqlx::query_scalar(
-        "SELECT id FROM reviews WHERE task_id = $1 AND reviewer_id = $2",
-    )
-    .bind(task_id)
-    .bind(auth_user.user_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let existing: Option<Uuid> =
+        sqlx::query_scalar("SELECT id FROM reviews WHERE task_id = $1 AND reviewer_id = $2")
+            .bind(task_id)
+            .bind(auth_user.user_id)
+            .fetch_optional(&state.db)
+            .await?;
 
     if existing.is_some() {
-        return Err(AppError::Conflict(
-            "Already reviewed this task".into(),
-        ));
+        return Err(AppError::Conflict("Already reviewed this task".into()));
     }
 
     // Moderate comment if present

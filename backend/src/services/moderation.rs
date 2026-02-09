@@ -164,6 +164,7 @@ pub fn strip_contact_info(text: &str) -> String {
 }
 
 /// Check pricing for suspicious outliers.
+#[allow(dead_code)]
 pub fn check_price_suspicious(price_cents: i64, _category_slug: &str) -> Option<String> {
     // For MVP, flag very low or very high prices
     if price_cents < 500 {

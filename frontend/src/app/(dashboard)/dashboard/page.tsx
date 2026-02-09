@@ -3,7 +3,7 @@
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useApi } from "@/lib/hooks/use-api";
 import { TaskList } from "@/components/tasks/task-list";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { TRUST_LEVEL_NAMES } from "@/lib/constants";
 import * as tasksApi from "@/lib/api/tasks";

@@ -6,7 +6,10 @@ mod models;
 mod routes;
 mod services;
 
-use axum::{Router, routing::{delete, get, post}};
+use axum::{
+    Router,
+    routing::{delete, get, post},
+};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
@@ -69,23 +72,53 @@ async fn main() {
         .route("/auth/logout", post(routes::auth::logout))
         .route("/auth/refresh", post(routes::auth::refresh))
         // User routes
-        .route("/users/me", get(routes::users::get_me).patch(routes::users::update_me))
-        .route("/users/me/stripe-connect", post(routes::users::initiate_stripe_connect))
-        .route("/users/me/stripe-connect/status", get(routes::users::stripe_connect_status))
+        .route(
+            "/users/me",
+            get(routes::users::get_me).patch(routes::users::update_me),
+        )
+        .route(
+            "/users/me/stripe-connect",
+            post(routes::users::initiate_stripe_connect),
+        )
+        .route(
+            "/users/me/stripe-connect/status",
+            get(routes::users::stripe_connect_status),
+        )
         .route("/users/{id}", get(routes::users::get_user_profile))
         // Invite routes
-        .route("/invites", post(routes::invites::create_invites).get(routes::invites::list_invites))
+        .route(
+            "/invites",
+            post(routes::invites::create_invites).get(routes::invites::list_invites),
+        )
         .route("/invites/{code}", get(routes::invites::validate_invite))
         // Attestation routes
-        .route("/attestations", get(routes::attestations::list_attestations))
-        .route("/attestations/{id}/confirm", post(routes::attestations::confirm_attestation))
-        .route("/attestations/{id}/revoke", post(routes::attestations::revoke_attestation))
+        .route(
+            "/attestations",
+            get(routes::attestations::list_attestations),
+        )
+        .route(
+            "/attestations/{id}/confirm",
+            post(routes::attestations::confirm_attestation),
+        )
+        .route(
+            "/attestations/{id}/revoke",
+            post(routes::attestations::revoke_attestation),
+        )
         // Task routes
-        .route("/tasks", post(routes::tasks::create_task).get(routes::tasks::list_tasks))
-        .route("/tasks/{id}", get(routes::tasks::get_task).patch(routes::tasks::update_task))
+        .route(
+            "/tasks",
+            post(routes::tasks::create_task).get(routes::tasks::list_tasks),
+        )
+        .route(
+            "/tasks/{id}",
+            get(routes::tasks::get_task).patch(routes::tasks::update_task),
+        )
         .route("/tasks/{id}/publish", post(routes::tasks::publish_task))
         .route("/tasks/{id}/cancel", post(routes::tasks::cancel_task))
-        .route("/tasks/{id}/assign/{application_id}", post(routes::tasks::assign_task))
+        .route(
+            "/tasks/{id}/assign/{application_id}",
+            post(routes::tasks::assign_task),
+        )
         .route("/tasks/{id}/start", post(routes::tasks::start_task))
         .route("/tasks/{id}/submit", post(routes::tasks::submit_task))
         .route("/tasks/{id}/approve", post(routes::tasks::approve_task))
@@ -107,18 +140,38 @@ async fn main() {
         )
         // Review routes
         .route("/tasks/{id}/reviews", post(routes::reviews::create_review))
-        .route("/users/{id}/reviews", get(routes::reviews::list_user_reviews))
+        .route(
+            "/users/{id}/reviews",
+            get(routes::reviews::list_user_reviews),
+        )
         // Admin routes
         .route("/admin/moderation", get(routes::admin::moderation_queue))
-        .route("/admin/moderation/{id}/approve", post(routes::admin::approve_moderation))
-        .route("/admin/moderation/{id}/reject", post(routes::admin::reject_moderation))
+        .route(
+            "/admin/moderation/{id}/approve",
+            post(routes::admin::approve_moderation),
+        )
+        .route(
+            "/admin/moderation/{id}/reject",
+            post(routes::admin::reject_moderation),
+        )
         .route("/admin/disputes", get(routes::admin::list_disputes))
-        .route("/admin/disputes/{id}/resolve", post(routes::admin::resolve_dispute))
+        .route(
+            "/admin/disputes/{id}/resolve",
+            post(routes::admin::resolve_dispute),
+        )
         .route("/admin/audit-log", get(routes::admin::query_audit_log))
-        .route("/admin/users/{id}/suspend", post(routes::admin::suspend_user))
+        .route(
+            "/admin/users/{id}/suspend",
+            post(routes::admin::suspend_user),
+        )
         .route("/admin/users/{id}/ban", post(routes::admin::ban_user))
         // Webhooks
-        .route("/webhooks/stripe", post(routes::webhooks::handle_stripe_webhook))
+        .route(
+            "/webhooks/stripe",
+            post(routes::webhooks::handle_stripe_webhook),
+        )
+        // Health check (no auth required)
+        .route("/health", get(routes::health::health_check))
         // Middleware
         .layer(TraceLayer::new_for_http())
         .layer(
@@ -136,7 +189,5 @@ async fn main() {
         .await
         .expect("Failed to bind address");
 
-    axum::serve(listener, app)
-        .await
-        .expect("Server failed");
+    axum::serve(listener, app).await.expect("Server failed");
 }

@@ -7,6 +7,7 @@ pub mod admin;
 pub mod applications;
 pub mod attestations;
 pub mod auth;
+pub mod health;
 pub mod invites;
 pub mod messages;
 pub mod reviews;

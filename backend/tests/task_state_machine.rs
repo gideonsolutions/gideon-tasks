@@ -1,4 +1,5 @@
 use gideon_tasks_api::models::task::TaskStatus;
+use std::str::FromStr;
 
 /// Test all valid transitions succeed.
 #[test]
@@ -127,10 +128,10 @@ fn test_status_round_trip() {
 
     for status in all {
         let s = status.as_str();
-        let parsed = TaskStatus::from_str(s);
+        let parsed: Result<TaskStatus, _> = s.parse();
         assert_eq!(
             parsed,
-            Some(status),
+            Ok(status),
             "Round-trip failed for {:?} -> {} -> {:?}",
             status,
             s,
@@ -139,10 +140,10 @@ fn test_status_round_trip() {
     }
 }
 
-/// Test unknown status string returns None.
+/// Test unknown status string returns Err.
 #[test]
-fn test_unknown_status_returns_none() {
-    assert_eq!(TaskStatus::from_str("unknown"), None);
-    assert_eq!(TaskStatus::from_str(""), None);
-    assert_eq!(TaskStatus::from_str("DRAFT"), None); // case sensitive
+fn test_unknown_status_returns_err() {
+    assert!(TaskStatus::from_str("unknown").is_err());
+    assert!(TaskStatus::from_str("").is_err());
+    assert!(TaskStatus::from_str("DRAFT").is_err()); // case sensitive
 }

@@ -35,8 +35,7 @@ impl AppConfig {
                 .unwrap_or_else(|_| "3000".into())
                 .parse()
                 .expect("SERVER_PORT must be a valid u16"),
-            base_url: env::var("BASE_URL")
-                .unwrap_or_else(|_| "http://localhost:3000".into()),
+            base_url: env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".into()),
         }
     }
 }

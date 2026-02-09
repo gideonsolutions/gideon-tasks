@@ -1,4 +1,6 @@
-use gideon_tasks_api::services::moderation::{ModerationResult, moderate_content, strip_contact_info};
+use gideon_tasks_api::services::moderation::{
+    ModerationResult, moderate_content, strip_contact_info,
+};
 
 // =============================================================================
 // Auto-rejection tests (Section 4.1)

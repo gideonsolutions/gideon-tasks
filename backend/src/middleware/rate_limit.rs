@@ -15,6 +15,12 @@ struct RateLimiterInner {
     requests: HashMap<String, Vec<Instant>>,
 }
 
+impl Default for RateLimiter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RateLimiter {
     pub fn new() -> Self {
         Self {
@@ -26,6 +32,7 @@ impl RateLimiter {
 
     /// Check if a request is allowed under the given rate limit.
     /// Returns true if allowed, false if rate limited.
+    #[allow(dead_code)]
     pub async fn check(&self, key: &str, max_requests: u32, window: Duration) -> bool {
         let mut inner = self.inner.lock().await;
         let now = Instant::now();
@@ -57,8 +64,10 @@ impl RateLimiter {
 }
 
 /// Rate limit configuration for different actions.
+#[allow(dead_code)]
 pub struct RateLimitConfig;
 
+#[allow(dead_code)]
 impl RateLimitConfig {
     /// Failed login attempts: 5 per 15 min
     pub const LOGIN_MAX: u32 = 5;

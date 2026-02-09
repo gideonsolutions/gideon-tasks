@@ -1,16 +1,9 @@
-use axum::{
-    Json,
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::auth::jwt::{
-    create_access_token, generate_refresh_token, hash_refresh_token,
-};
+use crate::auth::jwt::{create_access_token, generate_refresh_token, hash_refresh_token};
 use crate::auth::middleware::{AppState, AuthUser};
 use crate::auth::password::{hash_password, verify_password};
 use crate::errors::{AppError, AppResult};
@@ -46,32 +39,28 @@ pub async fn register(
     .ok_or_else(|| AppError::BadRequest("Invalid or expired invite code".into()))?;
 
     // Check targeted invite email matches (if set)
-    if let Some(ref target_email) = invite.target_email {
-        if target_email != &req.email {
-            return Err(AppError::BadRequest(
-                "This invite was issued for a different email address".into(),
-            ));
-        }
+    if let Some(ref target_email) = invite.target_email
+        && target_email != &req.email
+    {
+        return Err(AppError::BadRequest(
+            "This invite was issued for a different email address".into(),
+        ));
     }
 
     // Check email uniqueness
-    let existing: Option<Uuid> = sqlx::query_scalar(
-        "SELECT id FROM users WHERE email = $1",
-    )
-    .bind(&req.email)
-    .fetch_optional(&state.db)
-    .await?;
+    let existing: Option<Uuid> = sqlx::query_scalar("SELECT id FROM users WHERE email = $1")
+        .bind(&req.email)
+        .fetch_optional(&state.db)
+        .await?;
     if existing.is_some() {
         return Err(AppError::Conflict("Email already registered".into()));
     }
 
     // Check phone uniqueness
-    let existing: Option<Uuid> = sqlx::query_scalar(
-        "SELECT id FROM users WHERE phone = $1",
-    )
-    .bind(&req.phone)
-    .fetch_optional(&state.db)
-    .await?;
+    let existing: Option<Uuid> = sqlx::query_scalar("SELECT id FROM users WHERE phone = $1")
+        .bind(&req.phone)
+        .fetch_optional(&state.db)
+        .await?;
     if existing.is_some() {
         return Err(AppError::Conflict("Phone already registered".into()));
     }
@@ -124,12 +113,10 @@ pub async fn register(
     .await?;
 
     // Initialize reputation summary
-    sqlx::query(
-        "INSERT INTO reputation_summary (user_id, updated_at) VALUES ($1, now())",
-    )
-    .bind(user_id)
-    .execute(&state.db)
-    .await?;
+    sqlx::query("INSERT INTO reputation_summary (user_id, updated_at) VALUES ($1, now())")
+        .bind(user_id)
+        .execute(&state.db)
+        .await?;
 
     log_audit(
         &state.db,
@@ -242,20 +229,16 @@ pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<impl IntoResponse> {
-    let user = sqlx::query_as::<_, crate::models::user::User>(
-        "SELECT * FROM users WHERE email = $1",
-    )
-    .bind(&req.email)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::Unauthorized("Invalid email or password".into()))?;
+    let user =
+        sqlx::query_as::<_, crate::models::user::User>("SELECT * FROM users WHERE email = $1")
+            .bind(&req.email)
+            .fetch_optional(&state.db)
+            .await?
+            .ok_or_else(|| AppError::Unauthorized("Invalid email or password".into()))?;
 
     // Check user status
     if user.status != "active" {
-        return Err(AppError::Forbidden(format!(
-            "Account is {}",
-            user.status
-        )));
+        return Err(AppError::Forbidden(format!("Account is {}", user.status)));
     }
 
     // Verify password
@@ -343,18 +326,13 @@ pub async fn refresh(
         .await?;
 
     // Fetch current user data
-    let user = sqlx::query_as::<_, crate::models::user::User>(
-        "SELECT * FROM users WHERE id = $1",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await?;
+    let user = sqlx::query_as::<_, crate::models::user::User>("SELECT * FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_one(&state.db)
+        .await?;
 
     if user.status != "active" {
-        return Err(AppError::Forbidden(format!(
-            "Account is {}",
-            user.status
-        )));
+        return Err(AppError::Forbidden(format!("Account is {}", user.status)));
     }
 
     // Issue new tokens

@@ -14,7 +14,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, sqlx::Type)]
+#[allow(dead_code)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, sqlx::Type,
+)]
 #[sqlx(type_name = "TEXT")]
 #[serde(rename_all = "snake_case")]
 pub enum UserStatus {
@@ -23,6 +26,7 @@ pub enum UserStatus {
     Banned,
 }
 
+#[allow(dead_code)]
 impl UserStatus {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -31,13 +35,16 @@ impl UserStatus {
             Self::Banned => "banned",
         }
     }
+}
 
-    pub fn from_str(s: &str) -> Option<Self> {
+impl std::str::FromStr for UserStatus {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "active" => Some(Self::Active),
-            "suspended" => Some(Self::Suspended),
-            "banned" => Some(Self::Banned),
-            _ => None,
+            "active" => Ok(Self::Active),
+            "suspended" => Ok(Self::Suspended),
+            "banned" => Ok(Self::Banned),
+            _ => Err(()),
         }
     }
 }
@@ -89,10 +96,10 @@ impl TrustLevelRequirements {
     /// Maximum task value in cents for a given trust level.
     pub fn max_task_value_cents(level: i16) -> i64 {
         match level {
-            0 => 10_000,   // $100
-            1 => 50_000,   // $500
-            2 => 200_000,  // $2,000
-            3 => 500_000,  // $5,000
+            0 => 10_000,  // $100
+            1 => 50_000,  // $500
+            2 => 200_000, // $2,000
+            3 => 500_000, // $5,000
             _ => 0,
         }
     }
