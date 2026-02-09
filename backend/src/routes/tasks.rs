@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::auth::middleware::{AppState, AuthUser};
 use crate::errors::{AppError, AppResult};
-use crate::models::task::{Task, TaskStatus, MIN_TASK_PRICE_CENTS};
+use crate::models::task::{MIN_TASK_PRICE_CENTS, Task, TaskStatus};
 use crate::models::user::TrustLevelRequirements;
 use crate::services::audit::log_audit;
 use crate::services::moderation::{ModerationResult, moderate_content};
@@ -42,8 +42,8 @@ pub async fn create_task(
     }
 
     // Check max active posted tasks
-    let max_active = TrustLevelRequirements::max_active_posted(auth_user.trust_level)
-        .ok_or_else(|| {
+    let max_active =
+        TrustLevelRequirements::max_active_posted(auth_user.trust_level).ok_or_else(|| {
             AppError::TrustLevelInsufficient("Cannot post tasks at this trust level".into())
         })?;
 
@@ -83,7 +83,9 @@ pub async fn create_task(
 
     // Validate deadline is in the future
     if req.deadline <= Utc::now() {
-        return Err(AppError::BadRequest("Deadline must be in the future".into()));
+        return Err(AppError::BadRequest(
+            "Deadline must be in the future".into(),
+        ));
     }
 
     // Validate location
@@ -142,7 +144,9 @@ pub async fn create_task(
 pub struct ListTasksQuery {
     pub category_id: Option<Uuid>,
     pub location_type: Option<String>,
+    #[allow(dead_code)]
     pub min_price_cents: Option<i64>,
+    #[allow(dead_code)]
     pub max_price_cents: Option<i64>,
     pub page: Option<i64>,
     pub per_page: Option<i64>,
@@ -324,8 +328,10 @@ pub async fn publish_task(
     }
 
     // Validate state transition: DRAFT → PENDING_REVIEW
-    let current = TaskStatus::from_str(&task.status)
-        .ok_or_else(|| AppError::Internal("Invalid task status".into()))?;
+    let current: TaskStatus = task
+        .status
+        .parse()
+        .map_err(|_| AppError::Internal("Invalid task status".into()))?;
     current.transition_to(TaskStatus::PendingReview)?;
 
     // Run content moderation
@@ -335,12 +341,10 @@ pub async fn publish_task(
     match moderation {
         ModerationResult::Clean => {
             // Auto-approve: DRAFT → PENDING_REVIEW → PUBLISHED
-            sqlx::query(
-                "UPDATE tasks SET status = 'published', updated_at = now() WHERE id = $1",
-            )
-            .bind(task_id)
-            .execute(&state.db)
-            .await?;
+            sqlx::query("UPDATE tasks SET status = 'published', updated_at = now() WHERE id = $1")
+                .bind(task_id)
+                .execute(&state.db)
+                .await?;
 
             crate::services::audit::log_moderation(
                 &state.db,
@@ -443,8 +447,10 @@ pub async fn cancel_task(
         return Err(AppError::Forbidden("Not your task".into()));
     }
 
-    let current = TaskStatus::from_str(&task.status)
-        .ok_or_else(|| AppError::Internal("Invalid task status".into()))?;
+    let current: TaskStatus = task
+        .status
+        .parse()
+        .map_err(|_| AppError::Internal("Invalid task status".into()))?;
     current.transition_to(TaskStatus::Cancelled)?;
 
     sqlx::query("UPDATE tasks SET status = 'cancelled', updated_at = now() WHERE id = $1")
@@ -453,12 +459,11 @@ pub async fn cancel_task(
         .await?;
 
     // Refund if payment exists
-    let has_payment: Option<bool> = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM payments WHERE task_id = $1)",
-    )
-    .bind(task_id)
-    .fetch_one(&state.db)
-    .await?;
+    let has_payment: Option<bool> =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM payments WHERE task_id = $1)")
+            .bind(task_id)
+            .fetch_one(&state.db)
+            .await?;
     let has_payment = has_payment.unwrap_or(false);
 
     if has_payment {
@@ -496,8 +501,10 @@ pub async fn assign_task(
         return Err(AppError::Forbidden("Not your task".into()));
     }
 
-    let current = TaskStatus::from_str(&task.status)
-        .ok_or_else(|| AppError::Internal("Invalid task status".into()))?;
+    let current: TaskStatus = task
+        .status
+        .parse()
+        .map_err(|_| AppError::Internal("Invalid task status".into()))?;
     current.transition_to(TaskStatus::Assigned)?;
 
     // Get the application
@@ -511,12 +518,11 @@ pub async fn assign_task(
     .ok_or_else(|| AppError::NotFound("Application not found".into()))?;
 
     // Get requester's Stripe customer ID
-    let requester_stripe_id: Option<String> = sqlx::query_scalar(
-        "SELECT stripe_customer_id FROM users WHERE id = $1",
-    )
-    .bind(auth_user.user_id)
-    .fetch_one(&state.db)
-    .await?;
+    let requester_stripe_id: Option<String> =
+        sqlx::query_scalar("SELECT stripe_customer_id FROM users WHERE id = $1")
+            .bind(auth_user.user_id)
+            .fetch_one(&state.db)
+            .await?;
 
     let requester_stripe_id = requester_stripe_id
         .ok_or_else(|| AppError::PaymentError("Requester has no payment method on file".into()))?;
@@ -593,8 +599,10 @@ pub async fn start_task(
         return Err(AppError::Forbidden("Not the assigned doer".into()));
     }
 
-    let current = TaskStatus::from_str(&task.status)
-        .ok_or_else(|| AppError::Internal("Invalid task status".into()))?;
+    let current: TaskStatus = task
+        .status
+        .parse()
+        .map_err(|_| AppError::Internal("Invalid task status".into()))?;
     current.transition_to(TaskStatus::InProgress)?;
 
     // Capture payment
@@ -642,8 +650,10 @@ pub async fn submit_task(
         return Err(AppError::Forbidden("Not the assigned doer".into()));
     }
 
-    let current = TaskStatus::from_str(&task.status)
-        .ok_or_else(|| AppError::Internal("Invalid task status".into()))?;
+    let current: TaskStatus = task
+        .status
+        .parse()
+        .map_err(|_| AppError::Internal("Invalid task status".into()))?;
     current.transition_to(TaskStatus::Submitted)?;
 
     sqlx::query("UPDATE tasks SET status = 'submitted', updated_at = now() WHERE id = $1")
@@ -663,7 +673,9 @@ pub async fn submit_task(
     )
     .await?;
 
-    Ok(Json(serde_json::json!({ "message": "Task submitted for review" })))
+    Ok(Json(
+        serde_json::json!({ "message": "Task submitted for review" }),
+    ))
 }
 
 /// Requester approves completion → releases payment.
@@ -682,8 +694,10 @@ pub async fn approve_task(
         return Err(AppError::Forbidden("Not your task".into()));
     }
 
-    let current = TaskStatus::from_str(&task.status)
-        .ok_or_else(|| AppError::Internal("Invalid task status".into()))?;
+    let current: TaskStatus = task
+        .status
+        .parse()
+        .map_err(|_| AppError::Internal("Invalid task status".into()))?;
     current.transition_to(TaskStatus::Completed)?;
 
     // Release payment to doer
@@ -712,7 +726,9 @@ pub async fn approve_task(
     )
     .await?;
 
-    Ok(Json(serde_json::json!({ "message": "Task completed. Payment released." })))
+    Ok(Json(
+        serde_json::json!({ "message": "Task completed. Payment released." }),
+    ))
 }
 
 /// Requester disputes submission.
@@ -731,8 +747,10 @@ pub async fn dispute_task(
         return Err(AppError::Forbidden("Not your task".into()));
     }
 
-    let current = TaskStatus::from_str(&task.status)
-        .ok_or_else(|| AppError::Internal("Invalid task status".into()))?;
+    let current: TaskStatus = task
+        .status
+        .parse()
+        .map_err(|_| AppError::Internal("Invalid task status".into()))?;
     current.transition_to(TaskStatus::Disputed)?;
 
     sqlx::query("UPDATE tasks SET status = 'disputed', updated_at = now() WHERE id = $1")
@@ -752,5 +770,7 @@ pub async fn dispute_task(
     )
     .await?;
 
-    Ok(Json(serde_json::json!({ "message": "Task disputed. Awaiting admin resolution." })))
+    Ok(Json(
+        serde_json::json!({ "message": "Task disputed. Awaiting admin resolution." }),
+    ))
 }

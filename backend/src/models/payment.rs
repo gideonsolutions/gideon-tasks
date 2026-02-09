@@ -23,10 +23,10 @@ const GIDEON_FEE_BPS: u64 = 100; // 100 basis points = 1%
 
 /// Stripe's approximate fee rate (2.9% + $0.30). Recorded for transparency.
 /// These are not controlled by Gideon and may change at Stripe's discretion.
-const STRIPE_RATE_BPS: u64 = 290; // 2.9% = 290 basis points
 const STRIPE_FIXED_CENTS: u64 = 30;
 
 /// Payment status.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PaymentStatus {
@@ -37,6 +37,7 @@ pub enum PaymentStatus {
     Failed,
 }
 
+#[allow(dead_code)]
 impl PaymentStatus {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -47,15 +48,18 @@ impl PaymentStatus {
             Self::Failed => "failed",
         }
     }
+}
 
-    pub fn from_str(s: &str) -> Option<Self> {
+impl std::str::FromStr for PaymentStatus {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "pending" => Some(Self::Pending),
-            "escrowed" => Some(Self::Escrowed),
-            "released" => Some(Self::Released),
-            "refunded" => Some(Self::Refunded),
-            "failed" => Some(Self::Failed),
-            _ => None,
+            "pending" => Ok(Self::Pending),
+            "escrowed" => Ok(Self::Escrowed),
+            "released" => Ok(Self::Released),
+            "refunded" => Ok(Self::Refunded),
+            "failed" => Ok(Self::Failed),
+            _ => Err(()),
         }
     }
 }
@@ -91,7 +95,7 @@ impl FeeBreakdown {
         // total = ceil((subtotal + 30) / (1 - 0.029))
         // 1 - 0.029 = 0.971 → we use integer math: multiply by 10000, divide by 9710
         let numerator = (subtotal + STRIPE_FIXED_CENTS) * 10_000;
-        let total_charged = (numerator + 9_710 - 1) / 9_710; // ceiling division
+        let total_charged = numerator.div_ceil(9_710);
         let stripe_fee = total_charged - subtotal;
 
         Self {

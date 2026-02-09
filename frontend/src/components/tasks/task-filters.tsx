@@ -2,8 +2,6 @@
 
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import type { TaskStatus } from "@/lib/types";
-
 interface TaskFiltersProps {
   status: string;
   onStatusChange: (status: string) => void;

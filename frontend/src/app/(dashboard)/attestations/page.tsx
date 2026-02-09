@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useApi } from "@/lib/hooks/use-api";
 import { useToast } from "@/components/ui/toast";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";

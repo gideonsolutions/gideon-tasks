@@ -24,12 +24,11 @@ pub async fn create_invites(
     let count = req.count.unwrap_or(1).min(50); // Cap at 50 per request
 
     // Check quota
-    let used: Option<i64> = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM invites WHERE attestor_id = $1",
-    )
-    .bind(attestor.id)
-    .fetch_one(&state.db)
-    .await?;
+    let used: Option<i64> =
+        sqlx::query_scalar("SELECT COUNT(*) FROM invites WHERE attestor_id = $1")
+            .bind(attestor.id)
+            .fetch_one(&state.db)
+            .await?;
     let used = used.unwrap_or(0);
 
     if used + count as i64 > attestor.invite_quota as i64 {
@@ -64,7 +63,10 @@ pub async fn create_invites(
         }));
     }
 
-    Ok((StatusCode::CREATED, Json(serde_json::json!({ "invites": invites }))))
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::json!({ "invites": invites })),
+    ))
 }
 
 /// List invites for this attestor.
@@ -89,13 +91,11 @@ pub async fn validate_invite(
     State(state): State<AppState>,
     Path(code): Path<String>,
 ) -> AppResult<impl IntoResponse> {
-    let invite = sqlx::query_as::<_, Invite>(
-        "SELECT * FROM invites WHERE code = $1",
-    )
-    .bind(&code)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("Invite not found".into()))?;
+    let invite = sqlx::query_as::<_, Invite>("SELECT * FROM invites WHERE code = $1")
+        .bind(&code)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Invite not found".into()))?;
 
     let valid = invite.claimed_by.is_none() && invite.expires_at > Utc::now();
 
@@ -108,16 +108,11 @@ pub async fn validate_invite(
 
 /// Helper: find the attestor associated with a user.
 /// For MVP, we check if the user's email matches the attestor's contact_email.
-async fn get_user_attestor(
-    db: &sqlx::PgPool,
-    user_id: Uuid,
-) -> AppResult<Attestor> {
-    let user_email: String = sqlx::query_scalar(
-        "SELECT email FROM users WHERE id = $1",
-    )
-    .bind(user_id)
-    .fetch_one(db)
-    .await?;
+async fn get_user_attestor(db: &sqlx::PgPool, user_id: Uuid) -> AppResult<Attestor> {
+    let user_email: String = sqlx::query_scalar("SELECT email FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_one(db)
+        .await?;
 
     let attestor = sqlx::query_as::<_, Attestor>(
         "SELECT * FROM attestors WHERE contact_email = $1 AND status = 'active'",
@@ -134,5 +129,7 @@ fn generate_invite_code() -> String {
     use rand::Rng;
     let mut rng = rand::rng();
     let chars: Vec<char> = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".chars().collect();
-    (0..8).map(|_| chars[rng.random_range(0..chars.len())]).collect()
+    (0..8)
+        .map(|_| chars[rng.random_range(0..chars.len())])
+        .collect()
 }

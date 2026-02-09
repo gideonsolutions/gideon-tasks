@@ -7,11 +7,11 @@ use crate::errors::{AppError, AppResult};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: Uuid,        // user ID
+    pub sub: Uuid, // user ID
     pub is_admin: bool,
     pub trust_level: i16,
-    pub exp: i64,         // expiration timestamp
-    pub iat: i64,         // issued at
+    pub exp: i64, // expiration timestamp
+    pub iat: i64, // issued at
 }
 
 pub fn create_access_token(

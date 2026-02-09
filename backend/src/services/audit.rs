@@ -5,6 +5,7 @@ use crate::errors::AppResult;
 
 /// Write an entry to the append-only audit log.
 /// This function never fails silently — audit logging failures are errors.
+#[allow(clippy::too_many_arguments)]
 pub async fn log_audit(
     db: &PgPool,
     actor_id: Option<Uuid>,

@@ -68,9 +68,15 @@ pub async fn recompute_reputation(db: &PgPool, user_id: Uuid) -> AppResult<()> {
     };
 
     // Average review scores
-    let review_stats: Option<(Option<f64>, Option<f64>, Option<f64>, Option<f64>, Option<i64>)> =
-        sqlx::query_as(
-            r#"
+    #[allow(clippy::type_complexity)]
+    let review_stats: Option<(
+        Option<f64>,
+        Option<f64>,
+        Option<f64>,
+        Option<f64>,
+        Option<i64>,
+    )> = sqlx::query_as(
+        r#"
             SELECT
                 AVG(reliability::double precision),
                 AVG(quality::double precision),
@@ -80,10 +86,10 @@ pub async fn recompute_reputation(db: &PgPool, user_id: Uuid) -> AppResult<()> {
             FROM reviews
             WHERE reviewee_id = $1
             "#,
-        )
-        .bind(user_id)
-        .fetch_optional(db)
-        .await?;
+    )
+    .bind(user_id)
+    .fetch_optional(db)
+    .await?;
 
     let (avg_reliability, avg_quality, avg_communication, avg_integrity, review_count) =
         match review_stats {

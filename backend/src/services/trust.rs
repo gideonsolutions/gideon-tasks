@@ -20,12 +20,11 @@ pub async fn compute_trust_level(
     user_id: Uuid,
     admin_approved_level3: bool,
 ) -> AppResult<i16> {
-    let user_created: Option<chrono::DateTime<Utc>> = sqlx::query_scalar(
-        "SELECT created_at FROM users WHERE id = $1",
-    )
-    .bind(user_id)
-    .fetch_optional(db)
-    .await?;
+    let user_created: Option<chrono::DateTime<Utc>> =
+        sqlx::query_scalar("SELECT created_at FROM users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(db)
+            .await?;
 
     let created_at = match user_created {
         Some(ts) => ts,
@@ -34,12 +33,11 @@ pub async fn compute_trust_level(
 
     let account_age_days = (Utc::now() - created_at).num_days();
 
-    let rep: Option<ReputationSummary> = sqlx::query_as(
-        "SELECT * FROM reputation_summary WHERE user_id = $1",
-    )
-    .bind(user_id)
-    .fetch_optional(db)
-    .await?;
+    let rep: Option<ReputationSummary> =
+        sqlx::query_as("SELECT * FROM reputation_summary WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_optional(db)
+            .await?;
 
     let rep = match rep {
         Some(r) => r,

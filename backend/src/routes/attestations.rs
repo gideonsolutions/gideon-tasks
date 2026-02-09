@@ -51,12 +51,10 @@ pub async fn confirm_attestation(
         )));
     }
 
-    sqlx::query(
-        "UPDATE attestations SET status = 'confirmed', confirmed_at = now() WHERE id = $1",
-    )
-    .bind(attestation_id)
-    .execute(&state.db)
-    .await?;
+    sqlx::query("UPDATE attestations SET status = 'confirmed', confirmed_at = now() WHERE id = $1")
+        .bind(attestation_id)
+        .execute(&state.db)
+        .await?;
 
     log_audit(
         &state.db,
@@ -114,15 +112,11 @@ pub async fn revoke_attestation(
     ))
 }
 
-async fn get_user_attestor(
-    db: &sqlx::PgPool,
-    user_id: Uuid,
-) -> AppResult<Attestor> {
-    let user_email: String =
-        sqlx::query_scalar("SELECT email FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_one(db)
-            .await?;
+async fn get_user_attestor(db: &sqlx::PgPool, user_id: Uuid) -> AppResult<Attestor> {
+    let user_email: String = sqlx::query_scalar("SELECT email FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_one(db)
+        .await?;
 
     sqlx::query_as::<_, Attestor>(
         "SELECT * FROM attestors WHERE contact_email = $1 AND status = 'active'",

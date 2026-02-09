@@ -71,9 +71,21 @@ fn test_fee_invariants_across_price_range() {
         );
 
         // Invariant 4: all amounts are non-negative
-        assert!(b.gideon_fee_cents >= 0, "Negative gideon_fee at price={}", price);
-        assert!(b.stripe_fee_cents >= 0, "Negative stripe_fee at price={}", price);
-        assert!(b.doer_payout_cents >= 0, "Negative doer_payout at price={}", price);
+        assert!(
+            b.gideon_fee_cents >= 0,
+            "Negative gideon_fee at price={}",
+            price
+        );
+        assert!(
+            b.stripe_fee_cents >= 0,
+            "Negative stripe_fee at price={}",
+            price
+        );
+        assert!(
+            b.doer_payout_cents >= 0,
+            "Negative doer_payout at price={}",
+            price
+        );
         assert!(
             b.total_charged_cents >= b.task_price_cents,
             "Total less than task_price at price={}",

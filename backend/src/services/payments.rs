@@ -20,14 +20,14 @@ pub async fn create_escrow_payment(
     let client = stripe::Client::new(stripe_secret_key);
 
     // Create PaymentIntent with manual capture (authorize only)
-    let mut create_params = stripe::CreatePaymentIntent::new(
-        breakdown.total_charged_cents,
-        stripe::Currency::USD,
-    );
+    let mut create_params =
+        stripe::CreatePaymentIntent::new(breakdown.total_charged_cents, stripe::Currency::USD);
     create_params.capture_method = Some(stripe::PaymentIntentCaptureMethod::Manual);
-    create_params.customer = Some(requester_stripe_customer_id.parse().map_err(|_| {
-        AppError::PaymentError("Invalid Stripe customer ID".into())
-    })?);
+    create_params.customer = Some(
+        requester_stripe_customer_id
+            .parse()
+            .map_err(|_| AppError::PaymentError("Invalid Stripe customer ID".into()))?,
+    );
     create_params.metadata = Some(
         [
             ("task_id".to_string(), task_id.to_string()),
@@ -40,7 +40,9 @@ pub async fn create_escrow_payment(
 
     let payment_intent = stripe::PaymentIntent::create(&client, create_params)
         .await
-        .map_err(|e| AppError::PaymentError(format!("Stripe PaymentIntent creation failed: {e}")))?;
+        .map_err(|e| {
+            AppError::PaymentError(format!("Stripe PaymentIntent creation failed: {e}"))
+        })?;
 
     let payment_id = Uuid::now_v7();
 
@@ -75,18 +77,13 @@ pub async fn create_escrow_payment(
 
 /// Capture an authorized PaymentIntent (transition from authorized → captured).
 /// Called when the doer confirms start.
-pub async fn capture_payment(
-    db: &PgPool,
-    stripe_secret_key: &str,
-    task_id: Uuid,
-) -> AppResult<()> {
-    let payment: crate::models::payment::Payment = sqlx::query_as(
-        "SELECT * FROM payments WHERE task_id = $1",
-    )
-    .bind(task_id)
-    .fetch_optional(db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("Payment not found".into()))?;
+pub async fn capture_payment(db: &PgPool, stripe_secret_key: &str, task_id: Uuid) -> AppResult<()> {
+    let payment: crate::models::payment::Payment =
+        sqlx::query_as("SELECT * FROM payments WHERE task_id = $1")
+            .bind(task_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Payment not found".into()))?;
 
     let client = stripe::Client::new(stripe_secret_key);
 
@@ -100,47 +97,38 @@ pub async fn capture_payment(
     .await
     .map_err(|e| AppError::PaymentError(format!("Stripe capture failed: {e}")))?;
 
-    sqlx::query(
-        "UPDATE payments SET status = 'escrowed', escrowed_at = now() WHERE task_id = $1",
-    )
-    .bind(task_id)
-    .execute(db)
-    .await?;
+    sqlx::query("UPDATE payments SET status = 'escrowed', escrowed_at = now() WHERE task_id = $1")
+        .bind(task_id)
+        .execute(db)
+        .await?;
 
     Ok(())
 }
 
 /// Release escrowed funds to the doer via Stripe Transfer.
 /// Called when the requester approves completion.
-pub async fn release_payment(
-    db: &PgPool,
-    stripe_secret_key: &str,
-    task_id: Uuid,
-) -> AppResult<()> {
-    let payment: crate::models::payment::Payment = sqlx::query_as(
-        "SELECT * FROM payments WHERE task_id = $1",
-    )
-    .bind(task_id)
-    .fetch_optional(db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("Payment not found".into()))?;
+pub async fn release_payment(db: &PgPool, stripe_secret_key: &str, task_id: Uuid) -> AppResult<()> {
+    let payment: crate::models::payment::Payment =
+        sqlx::query_as("SELECT * FROM payments WHERE task_id = $1")
+            .bind(task_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Payment not found".into()))?;
 
     // Get doer's Stripe Connect account
-    let doer_connect_id: Option<String> = sqlx::query_scalar(
-        "SELECT stripe_connect_account_id FROM users WHERE id = $1",
-    )
-    .bind(payment.doer_id)
-    .fetch_optional(db)
-    .await?
-    .flatten();
+    let doer_connect_id: Option<String> =
+        sqlx::query_scalar("SELECT stripe_connect_account_id FROM users WHERE id = $1")
+            .bind(payment.doer_id)
+            .fetch_optional(db)
+            .await?
+            .flatten();
 
     let doer_connect_id = doer_connect_id
         .ok_or_else(|| AppError::PaymentError("Doer has no Stripe Connect account".into()))?;
 
     let client = stripe::Client::new(stripe_secret_key);
 
-    let mut transfer_params =
-        stripe::CreateTransfer::new(stripe::Currency::USD, doer_connect_id);
+    let mut transfer_params = stripe::CreateTransfer::new(stripe::Currency::USD, doer_connect_id);
     transfer_params.amount = Some(payment.doer_payout_cents);
     transfer_params.metadata = Some(
         [
@@ -172,18 +160,13 @@ pub async fn release_payment(
 
 /// Refund a payment (full refund of the PaymentIntent).
 /// Gideon absorbs its own fee on refunds.
-pub async fn refund_payment(
-    db: &PgPool,
-    stripe_secret_key: &str,
-    task_id: Uuid,
-) -> AppResult<()> {
-    let payment: crate::models::payment::Payment = sqlx::query_as(
-        "SELECT * FROM payments WHERE task_id = $1",
-    )
-    .bind(task_id)
-    .fetch_optional(db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("Payment not found".into()))?;
+pub async fn refund_payment(db: &PgPool, stripe_secret_key: &str, task_id: Uuid) -> AppResult<()> {
+    let payment: crate::models::payment::Payment =
+        sqlx::query_as("SELECT * FROM payments WHERE task_id = $1")
+            .bind(task_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Payment not found".into()))?;
 
     let client = stripe::Client::new(stripe_secret_key);
 
@@ -200,22 +183,25 @@ pub async fn refund_payment(
         .map_err(|e| AppError::PaymentError(format!("Stripe cancel failed: {e}")))?;
     } else {
         // Payment was captured — issue a refund
-        let mut refund_params = stripe::CreateRefund::default();
-        refund_params.payment_intent = Some(payment.stripe_payment_intent_id.parse().map_err(|_| {
-            AppError::PaymentError("Invalid PaymentIntent ID".into())
-        })?);
+        let refund_params = stripe::CreateRefund {
+            payment_intent: Some(
+                payment
+                    .stripe_payment_intent_id
+                    .parse()
+                    .map_err(|_| AppError::PaymentError("Invalid PaymentIntent ID".into()))?,
+            ),
+            ..Default::default()
+        };
 
         stripe::Refund::create(&client, refund_params)
             .await
             .map_err(|e| AppError::PaymentError(format!("Stripe refund failed: {e}")))?;
     }
 
-    sqlx::query(
-        "UPDATE payments SET status = 'refunded', refunded_at = now() WHERE task_id = $1",
-    )
-    .bind(task_id)
-    .execute(db)
-    .await?;
+    sqlx::query("UPDATE payments SET status = 'refunded', refunded_at = now() WHERE task_id = $1")
+        .bind(task_id)
+        .execute(db)
+        .await?;
 
     Ok(())
 }

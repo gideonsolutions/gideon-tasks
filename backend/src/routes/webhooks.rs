@@ -31,9 +31,7 @@ pub async fn handle_stripe_webhook(
     let event: serde_json::Value = serde_json::from_slice(&body)
         .map_err(|e| AppError::BadRequest(format!("Invalid JSON: {e}")))?;
 
-    let event_type = event["type"]
-        .as_str()
-        .unwrap_or("unknown");
+    let event_type = event["type"].as_str().unwrap_or("unknown");
 
     tracing::info!("Stripe webhook received: {}", event_type);
 
@@ -97,11 +95,7 @@ pub async fn handle_stripe_webhook(
 }
 
 /// Verify Stripe webhook signature using HMAC-SHA256.
-fn verify_stripe_signature(
-    payload: &[u8],
-    sig_header: &str,
-    secret: &str,
-) -> AppResult<()> {
+fn verify_stripe_signature(payload: &[u8], sig_header: &str, secret: &str) -> AppResult<()> {
     // Parse sig header: t=timestamp,v1=signature
     let mut timestamp = None;
     let mut signatures = Vec::new();

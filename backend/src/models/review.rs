@@ -52,6 +52,7 @@ impl CreateReviewRequest {
     }
 
     /// A review is "positive" if all dimensions are >= 3.
+    #[allow(dead_code)]
     pub fn is_positive(&self) -> bool {
         self.reliability >= 3 && self.quality >= 3 && self.communication >= 3 && self.integrity >= 3
     }

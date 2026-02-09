@@ -11,11 +11,6 @@ use crate::errors::{AppError, AppResult};
 use crate::models::reputation::ReputationSummary;
 use crate::models::user::{PublicUserProfile, User};
 
-#[derive(Debug, Serialize)]
-pub struct UserProfileResponse {
-    pub user: User,
-}
-
 pub async fn get_me(
     State(state): State<AppState>,
     auth_user: AuthUser,
@@ -112,15 +107,17 @@ pub async fn initiate_stripe_connect(
     let client = stripe::Client::new(&state.config.stripe_secret_key);
 
     // Create Connect Express account
-    let mut params = stripe::CreateAccount::default();
-    params.type_ = Some(stripe::AccountType::Express);
-    params.country = Some("US");
-    params.capabilities = Some(stripe::CreateAccountCapabilities {
-        transfers: Some(stripe::CreateAccountCapabilitiesTransfers {
-            requested: Some(true),
+    let params = stripe::CreateAccount {
+        type_: Some(stripe::AccountType::Express),
+        country: Some("US"),
+        capabilities: Some(stripe::CreateAccountCapabilities {
+            transfers: Some(stripe::CreateAccountCapabilitiesTransfers {
+                requested: Some(true),
+            }),
+            ..Default::default()
         }),
         ..Default::default()
-    });
+    };
 
     let account = stripe::Account::create(&client, params)
         .await
@@ -138,10 +135,8 @@ pub async fn initiate_stripe_connect(
     // Create account link for onboarding
     let return_url = format!("{}/stripe/return", state.config.base_url);
     let refresh_url = format!("{}/stripe/refresh", state.config.base_url);
-    let mut link_params = stripe::CreateAccountLink::new(
-        account.id,
-        stripe::AccountLinkType::AccountOnboarding,
-    );
+    let mut link_params =
+        stripe::CreateAccountLink::new(account.id, stripe::AccountLinkType::AccountOnboarding);
     link_params.return_url = Some(&return_url);
     link_params.refresh_url = Some(&refresh_url);
 
@@ -156,19 +151,18 @@ pub async fn stripe_connect_status(
     State(state): State<AppState>,
     auth_user: AuthUser,
 ) -> AppResult<Json<serde_json::Value>> {
-    let connect_id: Option<String> = sqlx::query_scalar(
-        "SELECT stripe_connect_account_id FROM users WHERE id = $1",
-    )
-    .bind(auth_user.user_id)
-    .fetch_one(&state.db)
-    .await?;
+    let connect_id: Option<String> =
+        sqlx::query_scalar("SELECT stripe_connect_account_id FROM users WHERE id = $1")
+            .bind(auth_user.user_id)
+            .fetch_one(&state.db)
+            .await?;
 
     match connect_id {
         Some(id) => {
             let client = stripe::Client::new(&state.config.stripe_secret_key);
-            let account_id: stripe::AccountId = id.parse().map_err(|_| {
-                AppError::Internal("Invalid Stripe account ID stored".into())
-            })?;
+            let account_id: stripe::AccountId = id
+                .parse()
+                .map_err(|_| AppError::Internal("Invalid Stripe account ID stored".into()))?;
             let account = stripe::Account::retrieve(&client, &account_id, &[])
                 .await
                 .map_err(|e| AppError::PaymentError(format!("Stripe account fetch failed: {e}")))?;
