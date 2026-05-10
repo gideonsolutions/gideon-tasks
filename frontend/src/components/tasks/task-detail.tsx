@@ -5,6 +5,7 @@ import type { Task } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaskStatusBadge } from "./task-status-badge";
 import { FeeBreakdownDisplay } from "./fee-breakdown";
+import { TaskQuestions } from "./task-questions";
 import { formatCents, formatDate, formatDateTime } from "@/lib/utils/format";
 import { calculateFees } from "@/lib/utils/fees";
 import { GIDEON_FEE_BPS } from "@/lib/constants";
@@ -91,6 +92,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
         anchorCents={task.price_cents}
         pricingMode={task.pricing_mode}
       />
+      <TaskQuestions task={task} />
     </div>
   );
 }

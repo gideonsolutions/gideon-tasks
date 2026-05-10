@@ -119,6 +119,20 @@ CREATE TABLE task_applications (
 CREATE INDEX idx_task_applications_task_id ON task_applications(task_id);
 CREATE INDEX idx_task_applications_doer_id ON task_applications(doer_id);
 
+-- Task Questions (public pre-assignment Q&A between doers and the requester)
+CREATE TABLE task_questions (
+    id              UUID PRIMARY KEY,
+    task_id         UUID NOT NULL REFERENCES tasks(id),
+    asker_id        UUID NOT NULL REFERENCES users(id),
+    question_body   TEXT NOT NULL,
+    answer_body     TEXT,
+    answered_by_id  UUID REFERENCES users(id),
+    answered_at     TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_task_questions_task_id ON task_questions(task_id);
+
 -- Task Messages (post-assignment only)
 CREATE TABLE task_messages (
     id          UUID PRIMARY KEY,

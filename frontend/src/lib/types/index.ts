@@ -155,6 +155,19 @@ export interface CreateApplicationRequest {
   message?: string;
 }
 
+// ─── Question ────────────────────────────────────────────
+
+export interface TaskQuestion {
+  id: string;
+  task_id: string;
+  asker_id: string;
+  question_body: string;
+  answer_body: string | null;
+  answered_by_id: string | null;
+  answered_at: string | null;
+  created_at: string;
+}
+
 // ─── Message ─────────────────────────────────────────────
 
 export interface TaskMessage {
