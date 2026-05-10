@@ -9,7 +9,12 @@ import { Button } from "@/components/ui/button";
 import { FeeBreakdownDisplay } from "./fee-breakdown";
 import { useToast } from "@/components/ui/toast";
 import { MIN_TASK_PRICE_CENTS } from "@/lib/constants";
-import type { CreateTaskRequest, ApiError, Category } from "@/lib/types";
+import type {
+  CreateTaskRequest,
+  ApiError,
+  Category,
+  PricingMode,
+} from "@/lib/types";
 import * as tasksApi from "@/lib/api/tasks";
 import * as categoriesApi from "@/lib/api/categories";
 
@@ -30,6 +35,8 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
     price_dollars: initialData?.price_cents
       ? (initialData.price_cents / 100).toString()
       : "",
+    pricing_mode: (initialData?.pricing_mode ??
+      "doer_receives") as PricingMode,
     deadline: initialData?.deadline?.split("T")[0] ?? "",
   });
   const [error, setError] = useState("");
@@ -51,7 +58,7 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
 
   const priceCents = Math.round(parseFloat(form.price_dollars || "0") * 100);
 
-  function update(field: string, value: string) {
+  function update<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -64,7 +71,7 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
       return;
     }
     if (priceCents < MIN_TASK_PRICE_CENTS) {
-      setError(`Minimum task price is $${(MIN_TASK_PRICE_CENTS / 100).toFixed(2)}`);
+      setError(`Minimum amount is $${(MIN_TASK_PRICE_CENTS / 100).toFixed(2)}`);
       return;
     }
 
@@ -76,6 +83,7 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
         category_id: form.category_id,
         location_type: form.location_type as "remote" | "in_person",
         price_cents: priceCents,
+        pricing_mode: form.pricing_mode,
         deadline: new Date(form.deadline).toISOString(),
       };
 
@@ -103,6 +111,11 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
       setLoading(false);
     }
   }
+
+  const priceLabel =
+    form.pricing_mode === "doer_receives"
+      ? "Amount the doer should receive ($)"
+      : "Total amount I will pay ($)";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -136,10 +149,20 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
         options={categories.map((c) => ({ value: c.id, label: c.name }))}
       />
       <Select
+        id="pricing_mode"
+        label="How do you want to set the price?"
+        value={form.pricing_mode}
+        onChange={(e) => update("pricing_mode", e.target.value as PricingMode)}
+        options={[
+          { value: "doer_receives", label: "Set the doer's payout (recommended)" },
+          { value: "requester_pays", label: "Set the total I will pay" },
+        ]}
+      />
+      <Select
         id="location_type"
         label="Location Type"
         value={form.location_type}
-        onChange={(e) => update("location_type", e.target.value)}
+        onChange={(e) => update("location_type", e.target.value as "remote" | "in_person")}
         options={[
           { value: "remote", label: "Remote" },
           { value: "in_person", label: "In Person" },
@@ -157,7 +180,7 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
       )}
       <Input
         id="price"
-        label="Price ($)"
+        label={priceLabel}
         type="number"
         step="0.01"
         min={(MIN_TASK_PRICE_CENTS / 100).toFixed(2)}
@@ -167,7 +190,10 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
         placeholder="5.00"
       />
       {priceCents >= MIN_TASK_PRICE_CENTS && (
-        <FeeBreakdownDisplay priceCents={priceCents} />
+        <FeeBreakdownDisplay
+          anchorCents={priceCents}
+          pricingMode={form.pricing_mode}
+        />
       )}
       <Input
         id="deadline"

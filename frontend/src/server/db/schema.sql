@@ -85,6 +85,8 @@ CREATE TABLE tasks (
     location_lat        DOUBLE PRECISION,
     location_lng        DOUBLE PRECISION,
     price_cents         BIGINT NOT NULL CHECK (price_cents >= 500),
+    pricing_mode        TEXT NOT NULL DEFAULT 'doer_receives'
+                        CHECK (pricing_mode IN ('doer_receives', 'requester_pays')),
     status              TEXT NOT NULL DEFAULT 'draft'
                         CHECK (status IN ('draft', 'pending_review', 'published', 'assigned',
                                           'in_progress', 'submitted', 'completed', 'disputed',

@@ -8,7 +8,12 @@ import {
   maxActivePosted,
   maxTaskValueCents,
 } from "@/server/trust-levels";
-import { MIN_TASK_PRICE_CENTS } from "@/server/fees";
+import {
+  MIN_TASK_PRICE_CENTS,
+  calculateFees,
+  feeBpsForVolume,
+} from "@/server/fees";
+import { platformVolumeCents } from "@/server/platform-volume";
 import { ok, parseBody } from "@/server/route-helpers";
 
 export const runtime = "nodejs";
@@ -22,6 +27,7 @@ const CreateSchema = z.object({
   location_lat: z.number().optional().nullable(),
   location_lng: z.number().optional().nullable(),
   price_cents: z.number().int(),
+  pricing_mode: z.enum(["doer_receives", "requester_pays"]).default("doer_receives"),
   deadline: z.string(),
 });
 
@@ -53,10 +59,16 @@ export async function POST(req: Request) {
       );
     }
 
+    const feeBps = feeBpsForVolume(await platformVolumeCents());
+    const fees = calculateFees(body.price_cents, body.pricing_mode, feeBps);
+    if (fees.doer_payout_cents <= 0) {
+      throw badRequest("Amount is too small to cover fees");
+    }
+
     const maxValue = maxTaskValueCents(auth.trustLevel);
-    if (body.price_cents > maxValue) {
+    if (fees.doer_payout_cents > maxValue) {
       throw trustLevelInsufficient(
-        `Maximum task value at your trust level is $${(maxValue / 100).toFixed(2)}`,
+        `Maximum task value at your trust level is $${(maxValue / 100).toFixed(2)} (this task pays the doer $${(fees.doer_payout_cents / 100).toFixed(2)})`,
       );
     }
 
@@ -72,9 +84,9 @@ export async function POST(req: Request) {
     await execute(
       `INSERT INTO tasks
         (id, requester_id, title, description, category_id, location_type,
-         location_address, location_lat, location_lng, price_cents, status,
-         deadline, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'draft',$11,now(),now())`,
+         location_address, location_lat, location_lng, price_cents, pricing_mode,
+         status, deadline, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'draft',$12,now(),now())`,
       [
         taskId,
         auth.userId,
@@ -86,6 +98,7 @@ export async function POST(req: Request) {
         body.location_lat ?? null,
         body.location_lng ?? null,
         body.price_cents,
+        body.pricing_mode,
         deadline,
       ],
     );
@@ -93,6 +106,7 @@ export async function POST(req: Request) {
     await logAudit(auth.userId, "task.created", "task", taskId, null, {
       title: body.title,
       price_cents: body.price_cents,
+      pricing_mode: body.pricing_mode,
     });
 
     const task = await queryOne(`SELECT * FROM tasks WHERE id = $1`, [taskId]);
@@ -105,6 +119,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const categoryId = url.searchParams.get("category_id");
     const locationType = url.searchParams.get("location_type");
+    const sort = url.searchParams.get("sort") ?? "newest";
     const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
     const perPage = Math.min(
       100,
@@ -122,9 +137,28 @@ export async function GET(req: Request) {
       params.push(locationType);
       conds.push(`location_type = $${params.length}`);
     }
+
+    let orderBy: string;
+    switch (sort) {
+      case "price_asc":
+        orderBy = "price_cents ASC, created_at DESC";
+        break;
+      case "price_desc":
+        orderBy = "price_cents DESC, created_at DESC";
+        break;
+      case "deadline_asc":
+        orderBy = "deadline ASC";
+        break;
+      case "oldest":
+        orderBy = "created_at ASC";
+        break;
+      default:
+        orderBy = "created_at DESC";
+    }
+
     params.push(perPage, offset);
     const sql = `SELECT * FROM tasks WHERE ${conds.join(" AND ")}
-       ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+       ORDER BY ${orderBy} LIMIT $${params.length - 1} OFFSET $${params.length}`;
     const rows = await query(sql, params);
     return ok(rows);
   });

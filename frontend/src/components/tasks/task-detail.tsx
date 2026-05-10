@@ -1,16 +1,31 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Task } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaskStatusBadge } from "./task-status-badge";
 import { FeeBreakdownDisplay } from "./fee-breakdown";
 import { formatCents, formatDate, formatDateTime } from "@/lib/utils/format";
+import { calculateFees } from "@/lib/utils/fees";
+import { GIDEON_FEE_BPS } from "@/lib/constants";
+import * as categoriesApi from "@/lib/api/categories";
 
 interface TaskDetailProps {
   task: Task;
 }
 
 export function TaskDetail({ task }: TaskDetailProps) {
+  const [feeBps, setFeeBps] = useState(GIDEON_FEE_BPS);
+
+  useEffect(() => {
+    categoriesApi
+      .getCurrentFee()
+      .then((res) => setFeeBps(res.fee_bps))
+      .catch(() => {});
+  }, []);
+
+  const fees = calculateFees(task.price_cents, task.pricing_mode, feeBps);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -27,9 +42,19 @@ export function TaskDetail({ task }: TaskDetailProps) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h4 className="text-sm font-medium text-gray-500 mb-1">Price</h4>
-              <p className="text-lg font-semibold text-blue-600">
-                {formatCents(task.price_cents)}
+              <h4 className="text-sm font-medium text-gray-500 mb-1">
+                Doer receives
+              </h4>
+              <p className="text-lg font-semibold text-green-600">
+                {formatCents(fees.doer_payout_cents)}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 mb-1">
+                Requester pays
+              </h4>
+              <p className="text-lg font-semibold text-gray-900">
+                {formatCents(fees.total_charged_cents)}
               </p>
             </div>
             <div>
@@ -62,7 +87,10 @@ export function TaskDetail({ task }: TaskDetailProps) {
           )}
         </CardContent>
       </Card>
-      <FeeBreakdownDisplay priceCents={task.price_cents} />
+      <FeeBreakdownDisplay
+        anchorCents={task.price_cents}
+        pricingMode={task.pricing_mode}
+      />
     </div>
   );
 }

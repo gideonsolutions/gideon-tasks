@@ -5,25 +5,26 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { TaskList } from "@/components/tasks/task-list";
 import { TaskFilters } from "@/components/tasks/task-filters";
-import { FeeScheduleTable } from "@/components/marketing/fee-schedule";
 import { VolumeProgress } from "@/components/marketing/volume-progress";
 import { Spinner } from "@/components/ui/spinner";
 import { useApi } from "@/lib/hooks/use-api";
 import * as tasksApi from "@/lib/api/tasks";
 
 export default function HomePage() {
-  const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [locationType, setLocationType] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [sort, setSort] = useState("newest");
 
   const params: Record<string, string> = {};
-  if (status) params.status = status;
   if (search) params.search = search;
   if (locationType) params.location_type = locationType;
+  if (categoryId) params.category_id = categoryId;
+  if (sort && sort !== "newest") params.sort = sort;
 
   const { data: tasks, loading } = useApi(
     () => tasksApi.listTasks(Object.keys(params).length > 0 ? params : undefined),
-    [status, search, locationType],
+    [search, locationType, categoryId, sort],
   );
 
   return (
@@ -33,12 +34,14 @@ export default function HomePage() {
         <section>
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Browse Tasks</h1>
           <TaskFilters
-            status={status}
-            onStatusChange={setStatus}
             search={search}
             onSearchChange={setSearch}
             locationType={locationType}
             onLocationTypeChange={setLocationType}
+            categoryId={categoryId}
+            onCategoryChange={setCategoryId}
+            sort={sort}
+            onSortChange={setSort}
           />
           {loading ? (
             <div className="flex justify-center py-12">
@@ -49,7 +52,6 @@ export default function HomePage() {
           )}
         </section>
         <VolumeProgress />
-        <FeeScheduleTable />
       </main>
       <Footer />
     </div>

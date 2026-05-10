@@ -25,8 +25,9 @@ export async function POST(
       requester_id: string;
       status: TaskStatus;
       price_cents: number;
+      pricing_mode: "doer_receives" | "requester_pays";
     }>(
-      `SELECT requester_id, status, price_cents FROM tasks WHERE id = $1`,
+      `SELECT requester_id, status, price_cents, pricing_mode FROM tasks WHERE id = $1`,
       [id],
     );
     if (!task) throw notFound("Task not found");
@@ -53,6 +54,7 @@ export async function POST(
       auth.userId,
       app.doer_id,
       task.price_cents,
+      task.pricing_mode,
       requester.stripe_customer_id,
     );
 

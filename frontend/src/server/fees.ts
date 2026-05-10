@@ -1,37 +1,32 @@
 const STRIPE_FIXED_CENTS = 30n;
+const STRIPE_RATE_BPS = 290n;
 
 export interface FeeBreakdown {
-  task_price_cents: number;
+  anchor_cents: number;
+  total_charged_cents: number;
+  stripe_fee_cents: number;
   gideon_fee_cents: number;
   doer_payout_cents: number;
-  stripe_fee_cents: number;
-  total_charged_cents: number;
 }
 
-/**
- * Gideon's published fee schedule. Fee tiers down as cumulative platform
- * volume (in dollars of task price) crosses thresholds, with a floor at 1%.
- * The active tier is determined at escrow time, not task post time.
- */
+export type PricingMode = "doer_receives" | "requester_pays";
+
 export interface FeeTier {
-  /** Lower bound of cumulative platform volume in cents, inclusive. */
   volumeFromCents: number;
-  /** Upper bound in cents, exclusive. null = no upper bound. */
   volumeToCents: number | null;
-  /** Fee in basis points (100 bps = 1%). */
   bps: number;
 }
 
 export const FEE_SCHEDULE: FeeTier[] = [
-  { volumeFromCents: 0, volumeToCents: 100_000_000, bps: 500 }, // < $1M → 5%
-  { volumeFromCents: 100_000_000, volumeToCents: 200_000_000, bps: 450 }, // $1M – $2M → 4.5%
-  { volumeFromCents: 200_000_000, volumeToCents: 500_000_000, bps: 400 }, // $2M – $5M → 4%
-  { volumeFromCents: 500_000_000, volumeToCents: 1_000_000_000, bps: 350 }, // $5M – $10M → 3.5%
-  { volumeFromCents: 1_000_000_000, volumeToCents: 2_000_000_000, bps: 300 }, // $10M – $20M → 3%
-  { volumeFromCents: 2_000_000_000, volumeToCents: 5_000_000_000, bps: 250 }, // $20M – $50M → 2.5%
-  { volumeFromCents: 5_000_000_000, volumeToCents: 10_000_000_000, bps: 200 }, // $50M – $100M → 2%
-  { volumeFromCents: 10_000_000_000, volumeToCents: 20_000_000_000, bps: 150 }, // $100M – $200M → 1.5%
-  { volumeFromCents: 20_000_000_000, volumeToCents: null, bps: 100 }, // $200M+ → 1%
+  { volumeFromCents: 0, volumeToCents: 100_000_000, bps: 500 },
+  { volumeFromCents: 100_000_000, volumeToCents: 200_000_000, bps: 450 },
+  { volumeFromCents: 200_000_000, volumeToCents: 500_000_000, bps: 400 },
+  { volumeFromCents: 500_000_000, volumeToCents: 1_000_000_000, bps: 350 },
+  { volumeFromCents: 1_000_000_000, volumeToCents: 2_000_000_000, bps: 300 },
+  { volumeFromCents: 2_000_000_000, volumeToCents: 5_000_000_000, bps: 250 },
+  { volumeFromCents: 5_000_000_000, volumeToCents: 10_000_000_000, bps: 200 },
+  { volumeFromCents: 10_000_000_000, volumeToCents: 20_000_000_000, bps: 150 },
+  { volumeFromCents: 20_000_000_000, volumeToCents: null, bps: 100 },
 ];
 
 export function feeBpsForVolume(volumeCents: number): number {
@@ -48,26 +43,63 @@ export function feeBpsForVolume(volumeCents: number): number {
 
 export const DEFAULT_FEE_BPS = 500;
 
+function ceilDivBig(num: bigint, den: bigint): bigint {
+  return (num + den - 1n) / den;
+}
+
+/**
+ * Single Gideon fee, never double-deducted.
+ *
+ * `doer_receives`: anchor = what the doer gets. Requester pays a higher total
+ *   covering Gideon + Stripe fees.
+ *
+ * `requester_pays`: anchor = total the requester pays. Stripe and Gideon
+ *   fees come out of that total; doer gets the remainder.
+ */
 export function calculateFees(
-  taskPriceCents: number,
+  anchorCents: number,
+  mode: PricingMode = "doer_receives",
   feeBps: number = DEFAULT_FEE_BPS,
 ): FeeBreakdown {
-  const price = BigInt(taskPriceCents);
+  const anchor = BigInt(anchorCents);
   const bps = BigInt(feeBps);
-  const gideonFee = (price * bps) / 10_000n;
-  const doerPayout = price - gideonFee;
-  const subtotal = price + gideonFee;
 
-  const numerator = (subtotal + STRIPE_FIXED_CENTS) * 10_000n;
-  const totalCharged = (numerator + 9_710n - 1n) / 9_710n;
-  const stripeFee = totalCharged - subtotal;
+  if (mode === "doer_receives") {
+    const doerPayout = anchor;
+    const gideonFee = (doerPayout * bps) / 10_000n;
+    const subtotal = doerPayout + gideonFee;
+    const totalCharged = ceilDivBig((subtotal + STRIPE_FIXED_CENTS) * 10_000n, 9_710n);
+    const stripeFee = totalCharged - subtotal;
+    return {
+      anchor_cents: Number(anchor),
+      total_charged_cents: Number(totalCharged),
+      stripe_fee_cents: Number(stripeFee),
+      gideon_fee_cents: Number(gideonFee),
+      doer_payout_cents: Number(doerPayout),
+    };
+  }
 
+  const totalCharged = anchor;
+  const stripeFee =
+    ceilDivBig(totalCharged * STRIPE_RATE_BPS, 10_000n) + STRIPE_FIXED_CENTS;
+  const subtotal = totalCharged - stripeFee;
+  if (subtotal <= 0n) {
+    return {
+      anchor_cents: Number(anchor),
+      total_charged_cents: Number(totalCharged),
+      stripe_fee_cents: Number(stripeFee),
+      gideon_fee_cents: 0,
+      doer_payout_cents: 0,
+    };
+  }
+  const doerPayout = ceilDivBig(subtotal * 10_000n, 10_000n + bps);
+  const gideonFee = subtotal - doerPayout;
   return {
-    task_price_cents: Number(price),
+    anchor_cents: Number(anchor),
+    total_charged_cents: Number(totalCharged),
+    stripe_fee_cents: Number(stripeFee),
     gideon_fee_cents: Number(gideonFee),
     doer_payout_cents: Number(doerPayout),
-    stripe_fee_cents: Number(stripeFee),
-    total_charged_cents: Number(totalCharged),
   };
 }
 

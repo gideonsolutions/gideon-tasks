@@ -27,6 +27,8 @@ export type UserStatus = "active" | "suspended" | "banned";
 
 export type LocationType = "in_person" | "remote";
 
+export type PricingMode = "doer_receives" | "requester_pays";
+
 export type AttestorType = "church" | "nonprofit" | "organization";
 
 export type ModerationAction = "approved" | "rejected" | "flagged" | "escalated";
@@ -73,6 +75,7 @@ export interface Task {
   location_lat: number | null;
   location_lng: number | null;
   price_cents: number;
+  pricing_mode: PricingMode;
   status: TaskStatus;
   deadline: string;
   assigned_doer_id: string | null;
@@ -91,6 +94,7 @@ export interface CreateTaskRequest {
   location_lat?: number;
   location_lng?: number;
   price_cents: number;
+  pricing_mode?: PricingMode;
   deadline: string;
 }
 
@@ -103,7 +107,16 @@ export interface UpdateTaskRequest {
   location_lat?: number;
   location_lng?: number;
   price_cents?: number;
+  pricing_mode?: PricingMode;
   deadline?: string;
+}
+
+export interface FeeBreakdown {
+  anchor_cents: number;
+  total_charged_cents: number;
+  stripe_fee_cents: number;
+  gideon_fee_cents: number;
+  doer_payout_cents: number;
 }
 
 // ─── Payment ─────────────────────────────────────────────
@@ -125,14 +138,6 @@ export interface Payment {
   released_at: string | null;
   refunded_at: string | null;
   created_at: string;
-}
-
-export interface FeeBreakdown {
-  task_price_cents: number;
-  gideon_fee_cents: number;
-  doer_payout_cents: number;
-  stripe_fee_cents: number;
-  total_charged_cents: number;
 }
 
 // ─── Application ─────────────────────────────────────────

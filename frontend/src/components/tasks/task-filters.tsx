@@ -1,26 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import type { Category } from "@/lib/types";
+import * as categoriesApi from "@/lib/api/categories";
+
 interface TaskFiltersProps {
-  status: string;
-  onStatusChange: (status: string) => void;
   search: string;
   onSearchChange: (search: string) => void;
   locationType: string;
   onLocationTypeChange: (type: string) => void;
+  categoryId: string;
+  onCategoryChange: (id: string) => void;
+  sort: string;
+  onSortChange: (sort: string) => void;
 }
-
-const statusOptions = [
-  { value: "", label: "All Statuses" },
-  { value: "published", label: "Published" },
-  { value: "assigned", label: "Assigned" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "submitted", label: "Submitted" },
-  { value: "completed", label: "Completed" },
-  { value: "disputed", label: "Disputed" },
-  { value: "cancelled", label: "Cancelled" },
-];
 
 const locationOptions = [
   { value: "", label: "All Locations" },
@@ -28,14 +23,38 @@ const locationOptions = [
   { value: "in_person", label: "In Person" },
 ];
 
+const sortOptions = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "price_desc", label: "Price: high to low" },
+  { value: "price_asc", label: "Price: low to high" },
+  { value: "deadline_asc", label: "Deadline: soonest" },
+];
+
 export function TaskFilters({
-  status,
-  onStatusChange,
   search,
   onSearchChange,
   locationType,
   onLocationTypeChange,
+  categoryId,
+  onCategoryChange,
+  sort,
+  onSortChange,
 }: TaskFiltersProps) {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    categoriesApi
+      .listCategories()
+      .then(setCategories)
+      .catch(() => {});
+  }, []);
+
+  const categoryOptions = [
+    { value: "", label: "All Categories" },
+    ...categories.map((c) => ({ value: c.id, label: c.name })),
+  ];
+
   return (
     <div className="flex flex-wrap gap-3 mb-4">
       <div className="flex-1 min-w-[200px]">
@@ -46,14 +65,19 @@ export function TaskFilters({
         />
       </div>
       <Select
-        options={statusOptions}
-        value={status}
-        onChange={(e) => onStatusChange(e.target.value)}
+        options={categoryOptions}
+        value={categoryId}
+        onChange={(e) => onCategoryChange(e.target.value)}
       />
       <Select
         options={locationOptions}
         value={locationType}
         onChange={(e) => onLocationTypeChange(e.target.value)}
+      />
+      <Select
+        options={sortOptions}
+        value={sort}
+        onChange={(e) => onSortChange(e.target.value)}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import type {
   PublicUserProfile,
   StripeConnectResponse,
   StripeConnectStatus,
+  Task,
 } from "@/lib/types";
 
 export function getMe(): Promise<User> {
@@ -24,4 +25,8 @@ export function initiateStripeConnect(): Promise<StripeConnectResponse> {
 
 export function getStripeConnectStatus(): Promise<StripeConnectStatus> {
   return apiClient.get("/users/me/stripe-connect/status");
+}
+
+export function getMyTasks(): Promise<{ posted: Task[]; doing: Task[] }> {
+  return apiClient.get("/users/me/tasks");
 }

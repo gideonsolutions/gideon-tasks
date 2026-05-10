@@ -16,6 +16,8 @@ import {
   maxTaskValueCents,
 } from "@/server/trust-levels";
 import { moderateContent } from "@/server/moderation";
+import { calculateFees, feeBpsForVolume } from "@/server/fees";
+import { platformVolumeCents } from "@/server/platform-volume";
 import { logAudit } from "@/server/audit";
 import { ok, parseBody } from "@/server/route-helpers";
 
@@ -36,8 +38,9 @@ export async function POST(
       requester_id: string;
       status: string;
       price_cents: number;
+      pricing_mode: "doer_receives" | "requester_pays";
     }>(
-      `SELECT requester_id, status, price_cents FROM tasks WHERE id = $1`,
+      `SELECT requester_id, status, price_cents, pricing_mode FROM tasks WHERE id = $1`,
       [id],
     );
     if (!task) throw notFound("Task not found");
@@ -58,10 +61,12 @@ export async function POST(
       throw badRequest(`Maximum concurrent doer tasks reached (${maxConc})`);
     }
 
+    const feeBps = feeBpsForVolume(await platformVolumeCents());
+    const fees = calculateFees(task.price_cents, task.pricing_mode, feeBps);
     const maxVal = maxTaskValueCents(auth.trustLevel);
-    if (task.price_cents > maxVal) {
+    if (fees.doer_payout_cents > maxVal) {
       throw trustLevelInsufficient(
-        `Task value exceeds your trust level maximum ($${(maxVal / 100).toFixed(2)})`,
+        `Task payout ($${(fees.doer_payout_cents / 100).toFixed(2)}) exceeds your trust level maximum ($${(maxVal / 100).toFixed(2)})`,
       );
     }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FEE_SCHEDULE, feeBpsForVolume } from "@/lib/constants";
 import { formatCentsCompact } from "@/lib/utils/format";
@@ -9,7 +10,12 @@ function bpsToPercent(bps: number): string {
   return `${(bps / 100).toFixed(bps % 100 === 0 ? 0 : 1)}%`;
 }
 
-export function VolumeProgress() {
+interface VolumeProgressProps {
+  /** When true, omit the "See full schedule" link (used on the /fees page itself). */
+  hideScheduleLink?: boolean;
+}
+
+export function VolumeProgress({ hideScheduleLink = false }: VolumeProgressProps = {}) {
   const [volume, setVolume] = useState<number | null>(null);
 
   useEffect(() => {
@@ -79,17 +85,27 @@ export function VolumeProgress() {
         </div>
       </div>
 
-      <div className="mt-4 text-sm text-gray-700">
-        {nextTier && tierEnd ? (
-          <>
-            <span className="font-medium">
-              {formatCentsCompact(remainingCents)}
-            </span>{" "}
-            of volume until the fee drops to{" "}
-            <span className="font-medium">{bpsToPercent(nextTier.bps)}</span>.
-          </>
-        ) : (
-          <>Lowest published fee tier reached.</>
+      <div className="mt-4 flex items-baseline justify-between gap-4 text-sm">
+        <div className="text-gray-700">
+          {nextTier && tierEnd ? (
+            <>
+              <span className="font-medium">
+                {formatCentsCompact(remainingCents)}
+              </span>{" "}
+              until the fee drops to{" "}
+              <span className="font-medium">{bpsToPercent(nextTier.bps)}</span>.
+            </>
+          ) : (
+            <>Lowest published fee tier reached.</>
+          )}
+        </div>
+        {!hideScheduleLink && (
+          <Link
+            href="/fees"
+            className="text-sm text-blue-600 hover:underline whitespace-nowrap"
+          >
+            See full schedule →
+          </Link>
         )}
       </div>
     </section>

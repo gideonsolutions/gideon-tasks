@@ -1,7 +1,11 @@
 import "server-only";
 import { execute, queryOne } from "./db";
 import { newId } from "./auth";
-import { calculateFees, feeBpsForVolume } from "./fees";
+import {
+  calculateFees,
+  feeBpsForVolume,
+  type PricingMode,
+} from "./fees";
 import { platformVolumeCents } from "./platform-volume";
 import { stripe } from "./stripe";
 import { paymentError, notFound } from "./errors";
@@ -32,11 +36,12 @@ export async function createEscrowPayment(
   taskId: string,
   requesterId: string,
   doerId: string,
-  taskPriceCents: number,
+  anchorCents: number,
+  pricingMode: PricingMode,
   requesterStripeCustomerId: string,
 ): Promise<{ paymentId: string; clientSecret: string }> {
   const feeBps = feeBpsForVolume(await platformVolumeCents());
-  const fees = calculateFees(taskPriceCents, feeBps);
+  const fees = calculateFees(anchorCents, pricingMode, feeBps);
   const s = stripe();
 
   let intent;
@@ -72,7 +77,7 @@ export async function createEscrowPayment(
       taskId,
       requesterId,
       doerId,
-      fees.task_price_cents,
+      fees.doer_payout_cents,
       fees.gideon_fee_cents,
       fees.stripe_fee_cents,
       fees.total_charged_cents,
