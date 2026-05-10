@@ -24,3 +24,4 @@ frontend/out/
 # Deployment
 nginx/tmp/
 backups/
+.vercel

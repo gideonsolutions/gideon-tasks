@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/footer";
 import { TaskList } from "@/components/tasks/task-list";
 import { TaskFilters } from "@/components/tasks/task-filters";
 import { FeeScheduleTable } from "@/components/marketing/fee-schedule";
+import { VolumeProgress } from "@/components/marketing/volume-progress";
 import { Spinner } from "@/components/ui/spinner";
 import { useApi } from "@/lib/hooks/use-api";
 import * as tasksApi from "@/lib/api/tasks";
@@ -47,6 +48,7 @@ export default function HomePage() {
             <TaskList tasks={tasks ?? []} />
           )}
         </section>
+        <VolumeProgress />
         <FeeScheduleTable />
       </main>
       <Footer />

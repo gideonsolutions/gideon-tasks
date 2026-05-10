@@ -30,6 +30,23 @@ export function formatRelative(iso: string): string {
 }
 
 /**
+ * Format cents as a compact human-readable amount: 250_000 → "$2.5K",
+ * 100_000_000 → "$1M", 1_234_567_890 → "$12.3M". Used for headline figures.
+ */
+export function formatCentsCompact(cents: number): string {
+  const dollars = cents / 100;
+  if (dollars >= 1_000_000) {
+    const m = dollars / 1_000_000;
+    return `$${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M`;
+  }
+  if (dollars >= 1_000) {
+    const k = dollars / 1_000;
+    return `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}K`;
+  }
+  return `$${dollars.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+/**
  * Format a task status for display: "pending_review" → "Pending Review"
  */
 export function formatStatus(status: string): string {

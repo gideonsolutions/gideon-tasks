@@ -1,4 +1,8 @@
-import { FEE_SCHEDULE } from "@/lib/constants";
+"use client";
+
+import { useEffect, useState } from "react";
+import { FEE_SCHEDULE, feeBpsForVolume } from "@/lib/constants";
+import * as categoriesApi from "@/lib/api/categories";
 
 function formatMillions(cents: number | null): string {
   if (cents === null) return "—";
@@ -7,6 +11,15 @@ function formatMillions(cents: number | null): string {
 }
 
 export function FeeScheduleTable() {
+  const [activeBps, setActiveBps] = useState<number | null>(null);
+
+  useEffect(() => {
+    categoriesApi
+      .getCurrentFee()
+      .then((res) => setActiveBps(feeBpsForVolume(res.platform_volume_cents)))
+      .catch(() => setActiveBps(null));
+  }, []);
+
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-6">
       <h2 className="text-lg font-semibold text-gray-900">Gideon Fee Schedule</h2>
@@ -35,9 +48,24 @@ export function FeeScheduleTable() {
                   : to
                     ? `${from} – ${to}`
                     : `${from}+`;
+              const isActive = activeBps === tier.bps;
               return (
-                <tr key={tier.bps} className="text-gray-700">
-                  <td className="py-2 pr-4">{range}</td>
+                <tr
+                  key={tier.bps}
+                  className={
+                    isActive
+                      ? "bg-blue-50 text-blue-900 font-medium"
+                      : "text-gray-700"
+                  }
+                >
+                  <td className="py-2 pr-4">
+                    {range}
+                    {isActive && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
+                        current
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2 pr-4 font-medium">
                     {(tier.bps / 100).toFixed(tier.bps % 100 === 0 ? 0 : 1)}%
                   </td>
