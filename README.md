@@ -6,18 +6,20 @@ Licensed under the [Gideon Christian Open Source License (GCOSL) v1.0](LICENSE.m
 
 ## Architecture
 
-| Layer    | Stack                                              |
-| -------- | -------------------------------------------------- |
-| Backend  | Rust · Axum · SQLx · PostgreSQL                    |
-| Frontend | Next.js 16 · TypeScript · Tailwind CSS 4 · Zustand |
-| Payments | Stripe Connect (manual-capture escrow)             |
-| CI/CD    | GitHub Actions                                     |
+| Layer    | Stack                                                   |
+| -------- | ------------------------------------------------------- |
+| App      | Next.js 16 · TypeScript · Tailwind CSS 4 · App Router   |
+| Database | PostgreSQL (Neon serverless)                            |
+| Payments | Stripe Connect (manual-capture escrow)                  |
+| Hosting  | Vercel                                                  |
+
+The app is a single Next.js project. Frontend pages live under `frontend/src/app`, and API route handlers under `frontend/src/app/api`. Server-only modules (DB, auth, Stripe, moderation) live in `frontend/src/server`.
 
 ## Features
 
-**Task lifecycle** — Draft → Pending Review → Published → Assigned → In Progress → Submitted → Completed, with branching paths for disputes, cancellations, and expiration. State transitions enforced by a backend state machine.
+**Task lifecycle** — Draft → Pending Review → Published → Assigned → In Progress → Submitted → Completed, with branching paths for disputes, cancellations, and expiration.
 
-**Stripe Connect escrow** — Payment is authorized on assignment, captured when the doer starts work, and transferred to the doer on approval. Gideon fee is 1%; Stripe processing fees are reverse-engineered so doer and platform amounts are exact to the cent.
+**Stripe Connect escrow** — Payment is authorized on assignment, captured when the doer starts work, and transferred on approval. Gideon fee is 1%; Stripe processing fees are reverse-engineered so doer and platform amounts are exact to the cent.
 
 **Trust system** — Four levels (0–3) computed from completed tasks, dispute history, account age, and review scores. Level 3 requires admin sign-off.
 
@@ -29,99 +31,40 @@ Licensed under the [Gideon Christian Open Source License (GCOSL) v1.0](LICENSE.m
 
 **Reviews** — Four-dimension ratings: reliability, quality, communication, integrity.
 
-**Admin dashboard** — Moderation queue, dispute resolution, user management, audit log viewer.
-
-## Prerequisites
-
-- PostgreSQL 12+
-- Rust stable (2024 edition)
-- Node.js 22+
-- Stripe API keys (test or live)
-
 ## Setup
 
-### Backend
+### Prerequisites
 
-```bash
-cd backend
-cp .env.example .env
-# Edit .env — see below for required variables
-```
+- Node.js 22+
+- A Postgres database (Neon recommended for serverless deploys)
+- Stripe API keys (test or live)
 
-```
-DATABASE_URL=postgres://user:pass@localhost/gideon_tasks
-JWT_SECRET=<random-secret>
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-SERVER_PORT=8080
-BASE_URL=http://localhost:8080
-```
-
-Create the database and start the server (migrations run automatically on startup):
-
-```bash
-createdb gideon_tasks
-cargo run
-```
-
-Run tests:
-
-```bash
-cargo test --all-targets
-```
-
-### Frontend
+### Local development
 
 ```bash
 cd frontend
 cp .env.example .env.local
-# Edit .env.local:
-#   NEXT_PUBLIC_API_URL=http://localhost:8080
-#   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+# Fill in DATABASE_URL, JWT_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
 
 npm install
-npm run dev
+npm run db:migrate    # apply schema to your database
+npm run dev           # http://localhost:3000
 ```
 
-The frontend runs on `http://localhost:3000` and the backend on `http://localhost:8080`.
+### Tests
 
-## Project Structure
-
-```
-backend/
-  src/
-    auth/          # JWT, password hashing, middleware
-    config/        # Environment variable loading
-    errors/        # Centralized error types
-    middleware/     # Rate limiting
-    models/        # Domain types, state machine, fee math
-    routes/        # HTTP handlers (44 endpoints)
-    services/      # Payments, moderation, audit, reputation, trust
-  migrations/      # PostgreSQL schema
-  tests/           # Unit and integration tests
-
-frontend/
-  src/
-    app/           # Next.js App Router pages (24 routes)
-    components/    # React components (60+)
-    lib/           # API client, hooks, store, types, utils
+```bash
+npm test              # vitest (fees, state machine, moderation)
+npx tsc --noEmit      # type check
+npm run build         # production build
 ```
 
-## CI/CD
+## Deploy (Vercel)
 
-GitHub Actions workflows run on pushes and PRs to `main`:
-
-- **Backend** — `cargo fmt --check`, Clippy, tests, release build, `cargo audit`
-- **Frontend** — ESLint, TypeScript type check, Next.js build, `npm audit`
-
-## Design Decisions
-
-- **UUIDv7** for all identifiers (time-sortable)
-- **Integer cents** for all monetary values (no floating point)
-- **UTC timestamps** everywhere
-- **Append-only audit log** with database-level immutability
-- **Manual-capture PaymentIntents** for escrow without a third-party escrow service
-
-## License
-
-This project is licensed under the [Gideon Christian Open Source License (GCOSL) v1.0](LICENSE.md). Commercial rights are reserved exclusively by Gideon Solutions, LLC.
+1. Create a Neon project and copy the pooled connection string.
+2. `vercel link` from `frontend/`.
+3. Set env vars in the Vercel project: `DATABASE_URL`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `BASE_URL`.
+4. `npm run db:migrate` against the production database.
+5. `vercel --prod`.
+6. Add `www.gideontasks.com` (and `gideontasks.com`) as custom domains in the Vercel dashboard.
+7. Add a Stripe webhook endpoint pointing to `https://www.gideontasks.com/api/webhooks/stripe`; copy the signing secret into `STRIPE_WEBHOOK_SECRET`.

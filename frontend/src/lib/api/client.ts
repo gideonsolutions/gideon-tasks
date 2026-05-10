@@ -1,8 +1,7 @@
 import { useAuthStore } from "@/lib/store/auth";
 import type { ApiError } from "@/lib/types";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const BASE_URL = "/api";
 
 class ApiClient {
   private getToken(): string | null {
