@@ -2,20 +2,20 @@ import type { FeeBreakdown } from "@/lib/types";
 import { GIDEON_FEE_BPS, STRIPE_FIXED_CENTS } from "@/lib/constants";
 
 /**
- * Exact port of backend `FeeBreakdown::calculate` from `models/payment.rs`.
- * All integer math — no floating point.
+ * Exact mirror of backend `calculateFees` in `src/server/fees.ts`.
+ * All integer math — no floating point. The `feeBps` argument is the
+ * platform fee in basis points; defaults to `GIDEON_FEE_BPS` when the
+ * caller hasn't yet fetched the current tier from `/api/fees/current`.
  */
-export function calculateFees(taskPriceCents: number): FeeBreakdown {
+export function calculateFees(
+  taskPriceCents: number,
+  feeBps: number = GIDEON_FEE_BPS,
+): FeeBreakdown {
   const price = taskPriceCents;
-
-  // Gideon fee: exactly 1%, integer division rounds down (favors user)
-  const gideonFee = Math.floor((price * GIDEON_FEE_BPS) / 10_000);
+  const gideonFee = Math.floor((price * feeBps) / 10_000);
   const doerPayout = price - gideonFee;
   const subtotal = price + gideonFee;
 
-  // Stripe fee: reverse-engineer total so Stripe takes its cut
-  // total = ceil((subtotal + 30) / (1 - 0.029))
-  // 1 - 0.029 = 0.971 → multiply by 10000, divide by 9710
   const numerator = (subtotal + STRIPE_FIXED_CENTS) * 10_000;
   const totalCharged = Math.ceil(numerator / 9_710);
   const stripeFee = totalCharged - subtotal;

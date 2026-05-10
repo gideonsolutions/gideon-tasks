@@ -22,17 +22,18 @@ function generateCode(): string {
   return Array.from(buf, (b) => ALPHABET[b % ALPHABET.length]).join("");
 }
 
-const CATEGORIES: { name: string; slug: string }[] = [
-  { name: "Cleaning", slug: "cleaning" },
-  { name: "Handyman", slug: "handyman" },
-  { name: "Moving & Hauling", slug: "moving" },
-  { name: "Yard Work", slug: "yard-work" },
-  { name: "Errands & Delivery", slug: "errands" },
-  { name: "Pet Care", slug: "pet-care" },
-  { name: "Tutoring", slug: "tutoring" },
-  { name: "Computer Help", slug: "tech-help" },
-  { name: "Event Help", slug: "event-help" },
-  { name: "Other", slug: "other" },
+const CATEGORIES: { name: string; slug: string; sortOrder: number }[] = [
+  { name: "Tax Prep", slug: "tax-prep", sortOrder: 0 },
+  { name: "Cleaning", slug: "cleaning", sortOrder: 100 },
+  { name: "Handyman", slug: "handyman", sortOrder: 100 },
+  { name: "Moving & Hauling", slug: "moving", sortOrder: 100 },
+  { name: "Yard Work", slug: "yard-work", sortOrder: 100 },
+  { name: "Errands & Delivery", slug: "errands", sortOrder: 100 },
+  { name: "Pet Care", slug: "pet-care", sortOrder: 100 },
+  { name: "Tutoring", slug: "tutoring", sortOrder: 100 },
+  { name: "Computer Help", slug: "tech-help", sortOrder: 100 },
+  { name: "Event Help", slug: "event-help", sortOrder: 100 },
+  { name: "Other", slug: "other", sortOrder: 100 },
 ];
 
 async function main() {
@@ -75,11 +76,17 @@ async function main() {
       `SELECT id FROM categories WHERE slug = $1`,
       [cat.slug],
     )) as Array<{ id: string }>;
-    if (existing.length > 0) continue;
+    if (existing.length > 0) {
+      await sql.query(
+        `UPDATE categories SET sort_order = $1 WHERE slug = $2`,
+        [cat.sortOrder, cat.slug],
+      );
+      continue;
+    }
     await sql.query(
-      `INSERT INTO categories (id, name, slug, parent_id, is_active)
-       VALUES ($1, $2, $3, NULL, true)`,
-      [uuidv7(), cat.name, cat.slug],
+      `INSERT INTO categories (id, name, slug, parent_id, is_active, sort_order)
+       VALUES ($1, $2, $3, NULL, true, $4)`,
+      [uuidv7(), cat.name, cat.slug, cat.sortOrder],
     );
     inserted++;
   }

@@ -67,7 +67,8 @@ CREATE TABLE categories (
     name            TEXT NOT NULL,
     slug            TEXT UNIQUE NOT NULL,
     parent_id       UUID REFERENCES categories(id),
-    is_active       BOOLEAN NOT NULL DEFAULT true
+    is_active       BOOLEAN NOT NULL DEFAULT true,
+    sort_order      INTEGER NOT NULL DEFAULT 100
 );
 
 CREATE INDEX idx_categories_slug ON categories(slug);

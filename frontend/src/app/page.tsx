@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { TaskList } from "@/components/tasks/task-list";
 import { TaskFilters } from "@/components/tasks/task-filters";
+import { FeeScheduleTable } from "@/components/marketing/fee-schedule";
 import { Spinner } from "@/components/ui/spinner";
 import { useApi } from "@/lib/hooks/use-api";
 import * as tasksApi from "@/lib/api/tasks";
@@ -27,23 +28,26 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Browse Tasks</h1>
-        <TaskFilters
-          status={status}
-          onStatusChange={setStatus}
-          search={search}
-          onSearchChange={setSearch}
-          locationType={locationType}
-          onLocationTypeChange={setLocationType}
-        />
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Spinner size="lg" />
-          </div>
-        ) : (
-          <TaskList tasks={tasks ?? []} />
-        )}
+      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+        <section>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">Browse Tasks</h1>
+          <TaskFilters
+            status={status}
+            onStatusChange={setStatus}
+            search={search}
+            onSearchChange={setSearch}
+            locationType={locationType}
+            onLocationTypeChange={setLocationType}
+          />
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Spinner size="lg" />
+            </div>
+          ) : (
+            <TaskList tasks={tasks ?? []} />
+          )}
+        </section>
+        <FeeScheduleTable />
       </main>
       <Footer />
     </div>

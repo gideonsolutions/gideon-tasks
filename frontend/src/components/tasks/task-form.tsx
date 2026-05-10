@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { FeeBreakdownDisplay } from "./fee-breakdown";
 import { useToast } from "@/components/ui/toast";
 import { MIN_TASK_PRICE_CENTS } from "@/lib/constants";
-import type { CreateTaskRequest, ApiError } from "@/lib/types";
+import type { CreateTaskRequest, ApiError, Category } from "@/lib/types";
 import * as tasksApi from "@/lib/api/tasks";
+import * as categoriesApi from "@/lib/api/categories";
 
 interface TaskFormProps {
   initialData?: Partial<CreateTaskRequest>;
@@ -19,6 +20,7 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps) {
+  const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState({
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
@@ -35,6 +37,18 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
   const router = useRouter();
   const { addToast } = useToast();
 
+  useEffect(() => {
+    categoriesApi
+      .listCategories()
+      .then((rows) => {
+        setCategories(rows);
+        setForm((prev) =>
+          prev.category_id ? prev : { ...prev, category_id: rows[0]?.id ?? "" },
+        );
+      })
+      .catch(() => setError("Failed to load categories"));
+  }, []);
+
   const priceCents = Math.round(parseFloat(form.price_dollars || "0") * 100);
 
   function update(field: string, value: string) {
@@ -45,6 +59,10 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
     e.preventDefault();
     setError("");
 
+    if (!form.category_id) {
+      setError("Please select a category");
+      return;
+    }
     if (priceCents < MIN_TASK_PRICE_CENTS) {
       setError(`Minimum task price is $${(MIN_TASK_PRICE_CENTS / 100).toFixed(2)}`);
       return;
@@ -109,13 +127,13 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
         onChange={(e) => update("description", e.target.value)}
         placeholder="Describe the task in detail..."
       />
-      <Input
+      <Select
         id="category_id"
-        label="Category ID"
+        label="Category"
         required
         value={form.category_id}
         onChange={(e) => update("category_id", e.target.value)}
-        placeholder="Category UUID"
+        options={categories.map((c) => ({ value: c.id, label: c.name }))}
       />
       <Select
         id="location_type"
