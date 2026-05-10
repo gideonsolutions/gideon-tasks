@@ -19,7 +19,7 @@ The app is a single Next.js project. Frontend pages live under `frontend/src/app
 
 **Task lifecycle** — Draft → Pending Review → Published → Assigned → In Progress → Submitted → Completed, with branching paths for disputes, cancellations, and expiration.
 
-**Stripe Connect escrow** — Payment is authorized on assignment, captured when the doer starts work, and transferred on approval. Gideon fee is 1%; Stripe processing fees are reverse-engineered so doer and platform amounts are exact to the cent.
+**Stripe Connect escrow** — Payment is authorized on assignment, captured when the doer starts work, and transferred on approval. Gideon fee starts at 5% (gradually reducing to 1% over time); Stripe processing fees are reverse-engineered so doer and platform amounts are exact to the cent.
 
 **Trust system** — Four levels (0–3) computed from completed tasks, dispute history, account age, and review scores. Level 3 requires admin sign-off.
 

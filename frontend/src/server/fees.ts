@@ -1,4 +1,4 @@
-const GIDEON_FEE_BPS = 100n;
+const GIDEON_FEE_BPS = 500n;
 const STRIPE_FIXED_CENTS = 30n;
 
 export interface FeeBreakdown {
