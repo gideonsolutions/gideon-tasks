@@ -39,10 +39,11 @@ export default function TaskPage({
     );
   }
 
-  let role: UserRole = "doer";
-  if (isAdmin) role = "admin";
-  else if (task.requester_id === user?.id) role = "requester";
+  let role: UserRole;
+  if (task.requester_id === user?.id) role = "requester";
   else if (task.assigned_doer_id === user?.id) role = "doer";
+  else if (isAdmin) role = "admin";
+  else role = "doer";
 
   return (
     <div className="max-w-3xl space-y-6">
