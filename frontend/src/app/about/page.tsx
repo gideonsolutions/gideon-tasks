@@ -30,8 +30,8 @@ const faqs: QA[] = [
       <>
         By invitation only. Each invite is issued by an attestor — typically a
         church, nonprofit, or other community organization that has agreed to
-        vouch for new members. If you don&apos;t have an invite, ask someone
-        in your community who is already on the platform.
+        vouch for new members. If you don’t have an invite, ask someone in
+        your community who is already on the platform.
       </>
     ),
   },
@@ -39,27 +39,26 @@ const faqs: QA[] = [
     q: "How does the fee work?",
     a: (
       <>
-        One Gideon fee per transaction, plus Stripe&apos;s pass-through payment
+        One Gideon fee per transaction, plus Stripe’s pass-through payment
         processing fee. The Gideon fee follows a published staircase that
         steps down as the community grows — starting at 5% and reaching 1% at
         $200M+ in cumulative volume. See the{" "}
         <Link href="/fees" className="text-blue-600 hover:underline">
           full fee schedule
         </Link>
-        . Gideon never marks up Stripe&apos;s processing fee.
+        . Gideon never marks up Stripe’s processing fee.
       </>
     ),
   },
   {
-    q: "Doer&rsquo;s payout vs. total I pay — which one is the price?",
+    q: "Doer’s payout vs. total I pay — which one is the price?",
     a: (
       <>
-        When you post a task, you choose. &ldquo;Set the doer&rsquo;s
-        payout&rdquo; means the headline number is exactly what the doer
-        receives; Gideon and Stripe are added on top. &ldquo;Set the total I
-        will pay&rdquo; works the opposite way — the headline is what you pay,
-        and the doer receives what&rsquo;s left after fees. Either way the
-        platform fee is charged exactly once.
+        When you post a task, you choose. “Set the doer’s payout” means the
+        headline number is exactly what the doer receives; Gideon and Stripe
+        are added on top. “Set the total I will pay” works the opposite way
+        — the headline is what you pay, and the doer receives what’s left
+        after fees. Either way the platform fee is charged exactly once.
       </>
     ),
   },
@@ -67,17 +66,17 @@ const faqs: QA[] = [
     q: "How does the money flow?",
     a: (
       <>
-        When a requester picks a doer, the requester&apos;s card is
-        authorized — not yet charged — for the full amount. When the doer
-        confirms they&apos;re starting work, the payment is captured into
-        escrow. When the requester approves completion, the doer is paid out
-        to their Stripe Connect account. If there is a dispute, an admin
-        reviews and either pays the doer or refunds the requester.
+        When a requester picks a doer, the requester’s card is authorized —
+        not yet charged — for the full amount. When the doer confirms they’re
+        starting work, the payment is captured into escrow. When the requester
+        approves completion, the doer is paid out to their Stripe Connect
+        account. If there is a dispute, an admin reviews and either pays the
+        doer or refunds the requester.
       </>
     ),
   },
   {
-    q: "What if a task isn&rsquo;t completed?",
+    q: "What if a task isn’t completed?",
     a: (
       <>
         Either party can dispute. An admin reviews and either releases payment
@@ -96,8 +95,7 @@ const faqs: QA[] = [
         involving minors as task subjects, sexual content, weapons, illegal
         drugs, gambling, or trafficking is rejected. Contact information
         (phone, email, URLs) is not permitted in task descriptions; doers and
-        requesters communicate through the platform until they&apos;re
-        matched.
+        requesters communicate through the platform until they’re matched.
       </>
     ),
   },
@@ -147,8 +145,8 @@ const faqs: QA[] = [
       <>
         No. Phone numbers, emails, social handles, and URLs are stripped from
         task messages and rejected in task descriptions. Going off-platform
-        forfeits Gideon&apos;s escrow, the doer&apos;s review history, and
-        any future standing on the platform.
+        forfeits Gideon’s escrow, the doer’s review history, and any future
+        standing on the platform.
       </>
     ),
   },
