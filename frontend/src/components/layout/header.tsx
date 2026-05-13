@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/use-auth";
 
@@ -9,8 +10,15 @@ export function Header() {
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="text-xl font-bold text-blue-600">
-          Gideon Tasks
+        <Link href="/" className="flex items-center gap-2 text-xl font-bold text-blue-600">
+          <Image
+            src="/gideon-logo.svg"
+            alt="Gideon Tasks"
+            width={32}
+            height={32}
+            priority
+          />
+          <span>Gideon Tasks</span>
         </Link>
 
         <nav className="flex items-center gap-4">

@@ -1,11 +1,21 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function HomeHero() {
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-6">
-      <h1 className="text-2xl font-bold text-gray-900">
-        A trustworthy task marketplace for your community.
-      </h1>
+      <div className="flex items-start gap-4">
+        <Image
+          src="/gideon-logo.svg"
+          alt=""
+          width={64}
+          height={64}
+          className="shrink-0"
+        />
+        <h1 className="text-2xl font-bold text-gray-900">
+          A trustworthy task marketplace for your community.
+        </h1>
+      </div>
       <p className="mt-2 text-gray-700">
         Gideon Tasks is an invite-only marketplace for everyday work — errands,
         repairs, tutoring, tax prep, and more. Doers are vouched for by their

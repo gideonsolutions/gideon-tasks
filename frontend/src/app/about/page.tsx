@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -180,7 +181,16 @@ export default function AboutPage() {
       <Header />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 lg:px-8 space-y-8">
         <section>
-          <h1 className="text-3xl font-bold text-gray-900">About Gideon Tasks</h1>
+          <div className="flex items-center gap-4">
+            <Image
+              src="/gideon-logo.svg"
+              alt=""
+              width={64}
+              height={64}
+              className="shrink-0"
+            />
+            <h1 className="text-3xl font-bold text-gray-900">About Gideon Tasks</h1>
+          </div>
           <p className="mt-3 text-gray-700">
             Gideon Tasks is an invite-only task marketplace for community-rooted
             work. Doers are vouched for by their local church, nonprofit, or
