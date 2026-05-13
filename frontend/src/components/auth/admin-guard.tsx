@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
+import { useAuthHydrated } from "@/lib/hooks/use-auth-hydrated";
 import { Spinner } from "@/components/ui/spinner";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken);
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const router = useRouter();
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    if (useAuthStore.persist.hasHydrated()) setHydrated(true);
-    return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
-  }, []);
+  const hydrated = useAuthHydrated();
 
   useEffect(() => {
     if (!hydrated) return;
