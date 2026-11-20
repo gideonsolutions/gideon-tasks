@@ -4,7 +4,9 @@ import { env } from "./env";
 
 neonConfig.fetchConnectionCache = true;
 
-const sqlClient = neon(env.databaseUrl);
+// Created on the first query, so that importing this module (as `next build` does) needs no DATABASE_URL.
+let client: ReturnType<typeof neon> | null = null;
+const sqlClient = () => (client ??= neon(env.databaseUrl));
 
 export type SqlValue = string | number | boolean | null | Date | Buffer | object;
 
@@ -12,7 +14,7 @@ export async function query<T = Record<string, unknown>>(
   text: string,
   params: SqlValue[] = [],
 ): Promise<T[]> {
-  const rows = await sqlClient.query(text, params);
+  const rows = await sqlClient().query(text, params);
   return rows as T[];
 }
 
@@ -28,5 +30,5 @@ export async function execute(
   text: string,
   params: SqlValue[] = [],
 ): Promise<void> {
-  await sqlClient.query(text, params);
+  await sqlClient().query(text, params);
 }
