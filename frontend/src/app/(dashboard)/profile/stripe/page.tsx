@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
+import { EmailVerificationNotice } from "@/components/auth/email-verification-notice";
+import { PayoutStatusSummary } from "@/components/stripe/payout-status";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useApi } from "@/lib/hooks/use-api";
 import * as usersApi from "@/lib/api/users";
@@ -16,7 +17,7 @@ export default function StripeConnectPage() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const { data: status, loading: statusLoading } = useApi(
+  const { data: status, loading: statusLoading, error } = useApi(
     () => usersApi.getStripeConnectStatus(),
     [],
   );
@@ -36,53 +37,40 @@ export default function StripeConnectPage() {
     <div className="max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Stripe Connect</h1>
 
+      <EmailVerificationNotice purpose="to set up payouts" />
+
       <Card>
         <CardHeader>
-          <CardTitle>Payment Setup</CardTitle>
+          <CardTitle>Payouts</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {statusLoading ? (
             <div className="flex justify-center py-4">
               <Spinner />
             </div>
-          ) : user?.stripe_connect_account_id ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Charges:</span>
-                <Badge
-                  className={
-                    status?.charges_enabled
-                      ? "bg-green-100 text-green-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }
-                >
-                  {status?.charges_enabled ? "Enabled" : "Pending"}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Payouts:</span>
-                <Badge
-                  className={
-                    status?.payouts_enabled
-                      ? "bg-green-100 text-green-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }
-                >
-                  {status?.payouts_enabled ? "Enabled" : "Pending"}
-                </Badge>
-              </div>
-              {(!status?.charges_enabled || !status?.payouts_enabled) && (
+          ) : error ? (
+            <p className="text-sm text-red-700">{error.error}</p>
+          ) : status?.connected ? (
+            <div className="space-y-3">
+              <PayoutStatusSummary status={status} />
+              {!status.ready && status.needs_more_info && (
                 <Button onClick={handleConnect} loading={loading} size="sm">
-                  Complete Onboarding
+                  Continue onboarding
                 </Button>
               )}
             </div>
           ) : (
             <div>
               <p className="text-sm text-gray-600 mb-3">
-                Connect your Stripe account to receive payments for completed tasks.
+                Set up payouts with Stripe to be paid for completed tasks. Stripe
+                checks your identity and bank details; you need this before you
+                can start a task.
               </p>
-              <Button onClick={handleConnect} loading={loading}>
+              <Button
+                onClick={handleConnect}
+                loading={loading}
+                disabled={!user?.email_verified}
+              >
                 Connect with Stripe
               </Button>
             </div>

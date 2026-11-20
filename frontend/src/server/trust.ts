@@ -1,5 +1,6 @@
 import "server-only";
 import { execute, queryOne } from "./db";
+import { computeTrustLevel } from "./trust-levels";
 
 interface UserAge {
   created_at: string;
@@ -12,6 +13,12 @@ interface RepRow {
   positive_review_rate: number;
 }
 
+/**
+ * Gathers the inputs and applies the rules in ./trust-levels
+ * (computeTrustLevel), including the attestation rule: a confirmed,
+ * unrevoked attestation from an active attestor halves the completed-task
+ * and account-age requirements for level 1 only.
+ */
 async function computeLevel(userId: string, adminApprovedL3: boolean): Promise<number> {
   const user = await queryOne<UserAge>(
     `SELECT created_at, trust_level FROM users WHERE id = $1`,
@@ -29,26 +36,24 @@ async function computeLevel(userId: string, adminApprovedL3: boolean): Promise<n
   );
   if (!rep) return 0;
 
-  if (
-    adminApprovedL3 &&
-    rep.total_completed >= 50 &&
-    ageDays >= 180 &&
-    rep.positive_review_rate >= 0.95
-  ) {
-    return 3;
-  }
-  if (
-    rep.total_completed >= 20 &&
-    rep.disputes_lost === 0 &&
-    ageDays >= 90 &&
-    rep.positive_review_rate >= 0.9
-  ) {
-    return 2;
-  }
-  if (rep.total_completed >= 5 && rep.disputes_lost === 0 && ageDays >= 30) {
-    return 1;
-  }
-  return 0;
+  // 'revoked' is its own status, so a confirmed attestation is an unrevoked one.
+  const attestation = await queryOne<{ attested: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM attestations a
+       JOIN attestors t ON t.id = a.attestor_id
+       WHERE a.user_id = $1 AND a.status = 'confirmed' AND t.status = 'active'
+     ) AS attested`,
+    [userId],
+  );
+
+  return computeTrustLevel({
+    totalCompleted: Number(rep.total_completed),
+    disputesLost: Number(rep.disputes_lost),
+    positiveReviewRate: Number(rep.positive_review_rate),
+    accountAgeDays: ageDays,
+    hasConfirmedAttestation: attestation?.attested === true,
+    adminApprovedLevel3: adminApprovedL3,
+  });
 }
 
 export async function updateUserTrustLevel(userId: string): Promise<number> {

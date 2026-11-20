@@ -2,6 +2,7 @@ import { handle, notFound, forbidden, badRequest } from "@/server/errors";
 import { execute, queryOne } from "@/server/db";
 import { requireAuth } from "@/server/auth";
 import { logAudit } from "@/server/audit";
+import { updateUserTrustLevel } from "@/server/trust";
 import { ok } from "@/server/route-helpers";
 
 export const runtime = "nodejs";
@@ -42,6 +43,8 @@ export async function POST(
     await logAudit(auth.userId, "attestation.confirmed", "attestation", id, null, {
       user_id: attestation.user_id,
     });
+    // A confirmed attestation lets the member reach level 1 sooner.
+    await updateUserTrustLevel(attestation.user_id);
     return ok({ message: "Attestation confirmed" });
   });
 }

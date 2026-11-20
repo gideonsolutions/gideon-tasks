@@ -24,11 +24,9 @@ export async function POST(
 
     transitionTo(task.status, "cancelled");
 
-    await execute(
-      `UPDATE tasks SET status = 'cancelled', updated_at = now() WHERE id = $1`,
-      [id],
-    );
-
+    // Release the hold first: if Stripe fails, the task stays as it was and
+    // the requester can try again, instead of a cancelled task whose card is
+    // still held.
     const hasPayment = await queryOne<{ exists: boolean }>(
       `SELECT EXISTS(SELECT 1 FROM payments WHERE task_id = $1) AS exists`,
       [id],
@@ -36,6 +34,11 @@ export async function POST(
     if (hasPayment?.exists) {
       await refundPayment(id);
     }
+
+    await execute(
+      `UPDATE tasks SET status = 'cancelled', updated_at = now() WHERE id = $1`,
+      [id],
+    );
 
     await logAudit(
       auth.userId,

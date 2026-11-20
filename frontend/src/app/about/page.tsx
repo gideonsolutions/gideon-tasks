@@ -2,6 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import {
+  ATTESTED_LEVEL_1_REQUIREMENTS,
+  LEVEL_1_REQUIREMENTS,
+} from "@/lib/constants";
+
+const L1 = LEVEL_1_REQUIREMENTS;
+const L1_ATTESTED = ATTESTED_LEVEL_1_REQUIREMENTS;
 
 export const metadata = {
   title: "About — Gideon Tasks",
@@ -47,8 +54,11 @@ const faqs: QA[] = [
         No. Invites are optional. An invite is issued by an attestor — a
         church, nonprofit, or other community organization that has agreed to
         vouch for its members. If you sign up with an invite, the attestor is
-        asked to confirm that they know you. Being vouched for this way raises
-        your trust on Gideon Tasks.
+        asked to confirm that they know you. Once they confirm, you can reach
+        trust level 1 sooner: {L1_ATTESTED.completedTasks} completed tasks and
+        a {L1_ATTESTED.accountAgeDays}-day-old account instead of{" "}
+        {L1.completedTasks} and {L1.accountAgeDays} days. See the trust levels
+        below.
       </>
     ),
   },
@@ -83,12 +93,16 @@ const faqs: QA[] = [
     q: "How does the money flow?",
     a: (
       <>
-        When a requester picks a doer, the requester’s card is authorized —
-        not yet charged — for the full amount. When the doer confirms they’re
-        starting work, the payment is captured into escrow. When the requester
-        approves completion, the doer is paid out to their Stripe Connect
-        account. If there is a dispute, an admin reviews and either pays the
-        doer or refunds the requester.
+        Requesters save a card first; Stripe stores it, not Gideon Tasks.
+        When a requester picks a doer, the card is authorized — not yet
+        charged — for the full amount, and the bank may ask the requester to
+        confirm the payment. When the doer confirms they’re starting work, the
+        payment is captured into escrow; doers must set up payouts with
+        Stripe before they can start. When the requester approves completion,
+        the doer is paid out to their Stripe Connect account. If the requester
+        cancels before work starts, the hold is released. If there is a
+        dispute, an admin reviews and either pays the doer or refunds the
+        requester.
       </>
     ),
   },
@@ -129,9 +143,14 @@ const faqs: QA[] = [
             to $100.
           </li>
           <li>
-            <strong>Level 1 (Established)</strong> — 5+ completed tasks, no
-            disputes lost, 30+ day account. Raises the limit to $500 per task,
-            still with 2 active posted tasks.
+            <strong>Level 1 (Established)</strong> — {L1.completedTasks}+
+            completed tasks, no disputes lost, {L1.accountAgeDays}+ day account.
+            Raises the limit to $500 per task, still with 2 active posted
+            tasks. If an attestor has confirmed that they know you, and has not
+            withdrawn it, level 1 needs half the tasks (rounded up) and half
+            the account age: {L1_ATTESTED.completedTasks}+ completed tasks and a{" "}
+            {L1_ATTESTED.accountAgeDays}+ day account. You still need no lost
+            disputes.
           </li>
           <li>
             <strong>Level 2 (Trusted)</strong> — 20+ completed, no unresolved
@@ -144,6 +163,13 @@ const faqs: QA[] = [
             25 active posts.
           </li>
         </ul>
+        <p className="mt-2">
+          Being vouched for only ever shortens the path to level 1. It does not
+          change the requirements for levels 2 and 3, and it never replaces
+          the dispute and review conditions. A confirmation only counts while
+          the attestor is active, and if the attestor withdraws it, your level
+          is worked out again without it.
+        </p>
       </>
     ),
   },
@@ -213,7 +239,8 @@ export default function AboutPage() {
             Gideon Tasks is a task marketplace open to everyone in the US.
             Anyone can sign up with an email address. An invite from a local
             church, nonprofit, or community organization is optional: it lets
-            that organization vouch for you, which raises your trust. Payments
+            that organization vouch for you, which lets you reach the first
+            trust level sooner. Payments
             flow through Stripe Connect with escrow protection, and the
             platform charges one transparent fee that decreases as the
             community grows.

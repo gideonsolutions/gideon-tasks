@@ -138,18 +138,27 @@ export async function consumeVerificationToken(token: string): Promise<VerifyOut
 
 // ─── Gating ──────────────────────────────────────────────
 
-const VERIFY_FIRST: Record<"post" | "apply", string> = {
+export type VerifiedAction = "post" | "apply" | "pay" | "payouts";
+
+const VERIFY_FIRST: Record<VerifiedAction, string> = {
   post: "Confirm your email address before posting tasks. Open the link we emailed you, or ask for a new one from your dashboard.",
   apply: "Confirm your email address before applying for tasks. Open the link we emailed you, or ask for a new one from your dashboard.",
+  pay: "Confirm your email address before adding a payment card. Open the link we emailed you, or ask for a new one from your dashboard.",
+  payouts: "Confirm your email address before setting up payouts. Open the link we emailed you, or ask for a new one from your dashboard.",
 };
 
 /**
  * Reads the verification flag from the database (it is not in the JWT) and
  * throws 403 if the email is not confirmed. Returns true for convenience.
+ *
+ * Card and payout setup are gated too, so payment details are only ever
+ * attached to an account whose email address has been proven (an account
+ * registered with somebody else's address cannot collect payouts or hold a
+ * card on it).
  */
 export async function requireVerifiedEmail(
   userId: string,
-  action: "post" | "apply",
+  action: VerifiedAction,
 ): Promise<true> {
   const row = await queryOne<{ email_verified: boolean }>(
     `SELECT email_verified FROM users WHERE id = $1`,

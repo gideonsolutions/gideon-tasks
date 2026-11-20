@@ -1,5 +1,10 @@
 import { apiClient } from "./client";
-import type { Task, CreateTaskRequest, UpdateTaskRequest } from "@/lib/types";
+import type {
+  Task,
+  CreateTaskRequest,
+  UpdateTaskRequest,
+  AssignTaskResponse,
+} from "@/lib/types";
 
 export function listTasks(params?: Record<string, string>): Promise<Task[]> {
   const query = params ? "?" + new URLSearchParams(params).toString() : "";
@@ -26,10 +31,11 @@ export function cancelTask(id: string): Promise<Task> {
   return apiClient.post(`/tasks/${id}/cancel`);
 }
 
-export function assignTask(
-  id: string,
-  applicationId: string,
-): Promise<{ payment_client_secret: string }> {
+/**
+ * Places the hold on the requester's saved card and assigns the doer. Call
+ * again after stripe.handleNextAction when the response is requires_action.
+ */
+export function assignTask(id: string, applicationId: string): Promise<AssignTaskResponse> {
   return apiClient.post(`/tasks/${id}/assign/${applicationId}`);
 }
 

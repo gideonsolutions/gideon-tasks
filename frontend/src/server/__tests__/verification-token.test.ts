@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest";
 import { createHash } from "node:crypto";
 import {
   EMAIL_VERIFICATION_TTL_MS,
+  PASSWORD_RESET_TTL_MS,
   generateVerificationToken,
   hashVerificationToken,
   isWellFormedVerificationToken,
+  passwordResetExpiresAt,
   verificationExpiresAt,
   verificationTokenState,
 } from "../verification-token";
@@ -88,5 +90,25 @@ describe("expiry and single use", () => {
     const row = { expires_at: expires.toISOString(), used_at: null };
     expect(verificationTokenState(row, issued)).toBe("valid");
     expect(verificationTokenState(row, expires)).toBe("expired");
+  });
+});
+
+describe("password reset links", () => {
+  const issued = new Date("2026-11-19T12:00:00Z");
+  const expires = passwordResetExpiresAt(issued);
+
+  it("expire 1 hour after issue", () => {
+    expect(PASSWORD_RESET_TTL_MS).toBe(60 * 60 * 1000);
+    expect(expires.toISOString()).toBe("2026-11-19T13:00:00.000Z");
+  });
+
+  it("are valid until just before the hour and expired from it", () => {
+    const row = { expires_at: expires, used_at: null };
+    expect(verificationTokenState(row, new Date(expires.getTime() - 1))).toBe("valid");
+    expect(verificationTokenState(row, expires)).toBe("expired");
+  });
+
+  it("are much shorter-lived than verification links", () => {
+    expect(passwordResetExpiresAt(issued).getTime()).toBeLessThan(verificationExpiresAt(issued).getTime());
   });
 });

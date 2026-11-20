@@ -57,6 +57,10 @@ export {
   maxTaskValueCents,
   maxConcurrentDoer,
   maxActivePosted,
+  LEVEL_1_REQUIREMENTS,
+  LEVEL_2_REQUIREMENTS,
+  LEVEL_3_REQUIREMENTS,
+  ATTESTED_LEVEL_1_REQUIREMENTS,
 } from "@/server/trust-levels";
 
 export const TRUST_LEVEL_NAMES: Record<number, string> = {
