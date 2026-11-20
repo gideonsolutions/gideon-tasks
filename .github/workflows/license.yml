@@ -14,5 +14,9 @@ jobs:
       - name: Check LICENSE.md exists
         run: test -f LICENSE.md
 
-      - name: Check Cargo.toml license field
-        run: grep -q 'license = "GCOSL-1.0"' backend/Cargo.toml
+      # The Rust backend this step used to check (backend/Cargo.toml) was replaced by the single
+      # Next.js app in frontend/; check that the licence is still GCOSL v1.0 instead.
+      - name: Check LICENSE.md is GCOSL v1.0
+        run: |
+          grep -q 'Gideon Christian Open Source License (GCOSL)' LICENSE.md
+          grep -q 'Version 1.0' LICENSE.md
