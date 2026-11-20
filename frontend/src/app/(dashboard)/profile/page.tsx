@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { EmailVerificationNotice } from "@/components/auth/email-verification-notice";
 import { TRUST_LEVEL_NAMES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils/format";
 import * as usersApi from "@/lib/api/users";
@@ -42,6 +43,8 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+
+      <EmailVerificationNotice />
 
       <Card>
         <CardHeader>
@@ -97,8 +100,10 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500">Email</p>
                 <p>
                   {user.email}{" "}
-                  {user.email_verified && (
+                  {user.email_verified ? (
                     <Badge className="bg-green-100 text-green-700">Verified</Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-800">Not verified</Badge>
                   )}
                 </p>
               </div>

@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User, JwtClaims } from "@/lib/types";
+import type { User, JwtClaims, RegisterResponse } from "@/lib/types";
 import * as authApi from "@/lib/api/auth";
 import * as usersApi from "@/lib/api/users";
 
@@ -17,7 +17,7 @@ interface AuthState {
 
   // Actions
   login: (email: string, password: string) => Promise<void>;
-  register: (data: Parameters<typeof authApi.register>[0]) => Promise<string>;
+  register: (data: Parameters<typeof authApi.register>[0]) => Promise<RegisterResponse>;
   logout: () => void;
   refresh: () => Promise<void>;
   fetchUser: () => Promise<void>;
@@ -64,10 +64,7 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      register: async (data) => {
-        const res = await authApi.register(data);
-        return res.user_id;
-      },
+      register: (data) => authApi.register(data),
 
       logout: () => {
         const { accessToken } = get();

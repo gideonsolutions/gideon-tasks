@@ -9,6 +9,6 @@ export function createInvites(data: CreateInviteRequest): Promise<Invite[]> {
   return apiClient.post("/invites", data);
 }
 
-export function validateInvite(code: string): Promise<Invite> {
+export function validateInvite(code: string): Promise<Invite & { valid: boolean }> {
   return apiClient.get(`/invites/${code}`);
 }

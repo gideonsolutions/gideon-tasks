@@ -47,6 +47,8 @@ export const badRequest = (msg: string) => new AppError("bad_request", msg);
 export const unauthorized = (msg: string) => new AppError("unauthorized", msg);
 export const forbidden = (msg: string) => new AppError("forbidden", msg);
 export const conflict = (msg: string) => new AppError("conflict", msg);
+export const rateLimited = (msg: string) => new AppError("rate_limited", msg);
+export const internalError = (msg: string) => new AppError("internal", msg);
 export const contentRejected = (msg: string) =>
   new AppError("content_rejected", msg);
 export const contentFlagged = (msg: string) =>
