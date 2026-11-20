@@ -18,6 +18,7 @@ import {
 import { moderateContent } from "@/server/moderation";
 import { calculateFees, feeBpsForVolume } from "@/server/fees";
 import { platformVolumeCents } from "@/server/platform-volume";
+import { requireVerifiedEmail } from "@/server/email-verification";
 import { logAudit } from "@/server/audit";
 import { ok, parseBody } from "@/server/route-helpers";
 
@@ -48,7 +49,8 @@ export async function POST(
       throw badRequest("Can only apply to published tasks");
     if (task.requester_id === auth.userId)
       throw badRequest("Cannot apply to your own task");
-    if (!canApplyForTasks(auth.trustLevel))
+    const emailVerified = await requireVerifiedEmail(auth.userId, "apply");
+    if (!canApplyForTasks(auth.trustLevel, emailVerified))
       throw trustLevelInsufficient("Cannot apply for tasks at this trust level");
 
     const maxConc = maxConcurrentDoer(auth.trustLevel);

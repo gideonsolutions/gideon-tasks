@@ -1,5 +1,11 @@
 // Hard-coded constants matching backend
 
+import {
+  MAX_TASK_VALUE_CENTS,
+  MAX_CONCURRENT_DOER,
+  MAX_ACTIVE_POSTED,
+} from "@/server/trust-levels";
+
 /** Default Gideon fee — used for client-side previews before /fees/current loads. */
 export const GIDEON_FEE_BPS = 500;
 export const STRIPE_RATE_BPS = 290; // 2.9%
@@ -37,52 +43,25 @@ export function feeBpsForVolume(volumeCents: number): number {
   return 100;
 }
 
-// Trust level limits
+// Trust level limits: one definition in src/server/trust-levels.ts (a pure
+// module), re-exported here so the UI and the API cannot drift apart.
 export const TRUST_LEVELS = {
-  MAX_TASK_VALUE_CENTS: {
-    0: 10_000,
-    1: 50_000,
-    2: 200_000,
-    3: 500_000,
-  } as Record<number, number>,
-
-  MAX_CONCURRENT_DOER: {
-    0: 2,
-    1: 5,
-    2: 10,
-    3: 20,
-  } as Record<number, number>,
-
-  MAX_ACTIVE_POSTED: {
-    0: null,
-    1: 2,
-    2: 10,
-    3: 25,
-  } as Record<number, number | null>,
+  MAX_TASK_VALUE_CENTS,
+  MAX_CONCURRENT_DOER,
+  MAX_ACTIVE_POSTED,
 };
 
-export function canPostTasks(level: number): boolean {
-  return level >= 1;
-}
-
-export function canApplyForTasks(level: number): boolean {
-  return level >= 0;
-}
-
-export function maxTaskValueCents(level: number): number {
-  return TRUST_LEVELS.MAX_TASK_VALUE_CENTS[level] ?? 0;
-}
-
-export function maxConcurrentDoer(level: number): number {
-  return TRUST_LEVELS.MAX_CONCURRENT_DOER[level] ?? 0;
-}
-
-export function maxActivePosted(level: number): number | null {
-  return TRUST_LEVELS.MAX_ACTIVE_POSTED[level] ?? null;
-}
+export {
+  canPostTasks,
+  canApplyForTasks,
+  maxTaskValueCents,
+  maxConcurrentDoer,
+  maxActivePosted,
+} from "@/server/trust-levels";
 
 export const TRUST_LEVEL_NAMES: Record<number, string> = {
-  0: "Verified",
+  // Level 0 is any new account; email verification is shown separately.
+  0: "New",
   1: "Established",
   2: "Trusted",
   3: "Pillar",
