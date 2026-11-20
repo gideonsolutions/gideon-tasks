@@ -13,6 +13,10 @@ export default function RegisterPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Create Account</CardTitle>
+            <p className="text-sm text-gray-600 mt-1">
+              Gideon Tasks is open to everyone in the US. After you sign up,
+              we email you a link to confirm your address.
+            </p>
           </CardHeader>
           <CardContent>
             <RegisterForm />

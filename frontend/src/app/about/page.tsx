@@ -19,9 +19,10 @@ const faqs: QA[] = [
     q: "What is Gideon Tasks?",
     a: (
       <>
-        A private, invite-only task marketplace. Requesters post everyday work
-        — yard work, moving help, tutoring, tech help, tax prep, and more — and
-        vetted doers apply, complete the work, and get paid through escrow.
+        A task marketplace open to everyone in the US. Requesters post
+        everyday work — yard work, moving help, tutoring, tech help, tax prep,
+        and more — and doers apply, complete the work, and get paid through
+        escrow. Payments are in US dollars.
       </>
     ),
   },
@@ -29,10 +30,25 @@ const faqs: QA[] = [
     q: "How do I join?",
     a: (
       <>
-        By invitation only. Each invite is issued by an attestor — typically a
+        <Link href="/register" className="text-blue-600 hover:underline">
+          Create an account
+        </Link>{" "}
+        with your name, email address, phone number, and a password. We email
+        you a link to confirm your address; you need a confirmed email to post
+        tasks or apply for them. Stripe checks a requester’s card when they
+        book a doer, and checks a doer’s identity when they set up payouts.
+      </>
+    ),
+  },
+  {
+    q: "Do I need an invite?",
+    a: (
+      <>
+        No. Invites are optional. An invite is issued by an attestor — a
         church, nonprofit, or other community organization that has agreed to
-        vouch for new members. If you don’t have an invite, ask someone in
-        your community who is already on the platform.
+        vouch for its members. If you sign up with an invite, the attestor is
+        asked to confirm that they know you. Being vouched for this way raises
+        your trust on Gideon Tasks.
       </>
     ),
   },
@@ -104,16 +120,18 @@ const faqs: QA[] = [
     q: "How does the trust system work?",
     a: (
       <>
-        Four levels, all computed from your activity rather than self-claimed:
+        Four levels, all computed from your activity rather than self-claimed.
+        At every level you need a confirmed email address to post or apply.
         <ul className="mt-2 list-disc pl-5 space-y-1">
           <li>
-            <strong>Level 0 (Verified)</strong> — registered. Can apply to
-            tasks up to $100; cannot post.
+            <strong>Level 0 (New)</strong> — any account. Can post tasks up
+            to $100 each, with up to 2 active at a time, and apply to tasks up
+            to $100.
           </li>
           <li>
             <strong>Level 1 (Established)</strong> — 5+ completed tasks, no
-            disputes lost, 30+ day account. Unlocks posting up to $500 and 2
-            active posted tasks.
+            disputes lost, 30+ day account. Raises the limit to $500 per task,
+            still with 2 active posted tasks.
           </li>
           <li>
             <strong>Level 2 (Trusted)</strong> — 20+ completed, no unresolved
@@ -192,25 +210,26 @@ export default function AboutPage() {
             <h1 className="text-3xl font-bold text-gray-900">About Gideon Tasks</h1>
           </div>
           <p className="mt-3 text-gray-700">
-            Gideon Tasks is an invite-only task marketplace for community-rooted
-            work. Doers are vouched for by their local church, nonprofit, or
-            community organization. Payments flow through Stripe Connect with
-            escrow protection, and the platform charges one transparent fee
-            that decreases as the community grows.
+            Gideon Tasks is a task marketplace open to everyone in the US.
+            Anyone can sign up with an email address. An invite from a local
+            church, nonprofit, or community organization is optional: it lets
+            that organization vouch for you, which raises your trust. Payments
+            flow through Stripe Connect with escrow protection, and the
+            platform charges one transparent fee that decreases as the
+            community grows.
           </p>
           <p className="mt-3 text-gray-700">
-            The site is built on the conviction that a small, accountable
-            community produces better outcomes than an open marketplace of
-            strangers — both for the people doing the work and the people
-            paying for it. Identity, reputation, and disputes all stay rooted
-            in the community attestation chain rather than anonymous reviews.
+            Trust is earned on the platform rather than claimed. New accounts
+            start with small limits, and the limits rise with completed tasks,
+            account age, and reviews. Reviews are public and permanent, and an
+            admin reviews every dispute.
           </p>
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
             <Link
               href="/register"
               className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
             >
-              Register with an invite
+              Create an account
             </Link>
             <Link
               href="/fees"
