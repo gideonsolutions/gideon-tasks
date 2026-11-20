@@ -258,6 +258,18 @@ CREATE INDEX IF NOT EXISTS idx_email_verifications_user_id_created_at ON email_v
 -- to users.stripe_customer_id). Card details stay with Stripe.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_payment_method_id TEXT;
 
+-- Password resets (single-use links valid for 1 hour; only the SHA-256 hash of the token is stored)
+CREATE TABLE IF NOT EXISTS password_resets (
+    id          UUID PRIMARY KEY,
+    user_id     UUID NOT NULL REFERENCES users(id),
+    token_hash  TEXT UNIQUE NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used_at     TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_resets_user_id_created_at ON password_resets(user_id, created_at);
+
 -- Revoke UPDATE and DELETE on audit_log via a trigger (defense in depth)
 CREATE OR REPLACE FUNCTION prevent_audit_log_mutation() RETURNS TRIGGER AS $$
 BEGIN

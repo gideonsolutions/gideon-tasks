@@ -10,6 +10,9 @@ import type {
   VerifyEmailResponse,
   ResendVerificationResponse,
   VerifyPhoneRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  MessageResponse,
 } from "@/lib/types";
 
 export function register(data: RegisterRequest): Promise<RegisterResponse> {
@@ -38,4 +41,13 @@ export function resendVerification(): Promise<ResendVerificationResponse> {
 
 export function verifyPhone(data: VerifyPhoneRequest): Promise<void> {
   return apiClient.post("/auth/verify-phone", data);
+}
+
+/** Always answers the same way, whether or not the address has an account. */
+export function forgotPassword(data: ForgotPasswordRequest): Promise<MessageResponse> {
+  return apiClient.post("/auth/forgot-password", data);
+}
+
+export function resetPassword(data: ResetPasswordRequest): Promise<MessageResponse> {
+  return apiClient.post("/auth/reset-password", data);
 }

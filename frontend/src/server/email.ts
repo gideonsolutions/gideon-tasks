@@ -1,7 +1,10 @@
 import "server-only";
 import { Resend } from "resend";
 import { env } from "./env";
-import { EMAIL_VERIFICATION_TTL_HOURS } from "./verification-token";
+import {
+  EMAIL_VERIFICATION_TTL_HOURS,
+  PASSWORD_RESET_TTL_MINUTES,
+} from "./verification-token";
 
 export interface EmailMessage {
   to: string;
@@ -100,4 +103,32 @@ export function verificationEmail(to: string, link: string): EmailMessage {
 
 export function sendVerificationEmail(to: string, link: string): Promise<void> {
   return sendEmail(verificationEmail(to, link));
+}
+
+/**
+ * Like the verification email, the reset email contains no user-supplied
+ * text, so the form cannot be used to send arbitrary content.
+ */
+export function passwordResetEmail(to: string, link: string): EmailMessage {
+  const lines = {
+    intro: "Someone asked to reset the password for the Gideon Tasks account that uses this email address. To choose a new password, open this link:",
+    expiry: `The link works once and expires in ${PASSWORD_RESET_TTL_MINUTES} minutes.`,
+    ignore: "If you did not ask for this, you can ignore this email. Your password will not change.",
+  };
+  const href = escapeHtml(link);
+  return {
+    to,
+    subject: "Reset your Gideon Tasks password",
+    text: [lines.intro, "", link, "", lines.expiry, "", lines.ignore, ""].join("\n"),
+    html: [
+      `<p>${lines.intro}</p>`,
+      `<p><a href="${href}">${href}</a></p>`,
+      `<p>${lines.expiry}</p>`,
+      `<p>${lines.ignore}</p>`,
+    ].join("\n"),
+  };
+}
+
+export function sendPasswordResetEmail(to: string, link: string): Promise<void> {
+  return sendEmail(passwordResetEmail(to, link));
 }

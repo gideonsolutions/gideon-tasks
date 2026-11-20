@@ -33,6 +33,8 @@ The app is a single Next.js project. Frontend pages live under `frontend/src/app
 
 **Open registration** — Anyone can sign up. New accounts confirm their email address through a single-use link (sent with Resend) before they can post or apply for tasks. Stripe checks a requester's card at booking and a doer's identity when they set up payouts.
 
+**Password reset** — "Forgot password?" on the sign-in page emails a single-use link (32 random bytes, stored as a SHA-256 hash, valid for 1 hour). The request always gets the same answer, and the account lookup and email happen after the response, so the form never reveals whether an address has an account. Resetting marks the email verified, retires the account's other reset links and revokes every refresh token; existing access tokens lapse within `JWT_ACCESS_EXPIRY_SECS` (15 minutes by default). Limits mirror the verification emails: 20 requests per IP per hour, and per account one email a minute and 5 a day.
+
 **Invites and attestations (optional)** — An attestor (a church, nonprofit or organization) can issue invite codes. Signing up with one creates an attestation that the attestor confirms, which vouches for the member and raises their trust.
 
 **Reviews** — Four-dimension ratings: reliability, quality, communication, integrity.
@@ -52,7 +54,7 @@ cd frontend
 cp .env.example .env.local
 # Fill in DATABASE_URL, JWT_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
 # Optional locally: RESEND_API_KEY and EMAIL_FROM. Without RESEND_API_KEY,
-# verification links are printed to the server console instead of emailed.
+# verification and password reset links are printed to the server console instead of emailed.
 
 npm install
 npm run db:migrate    # apply schema to your database
@@ -62,7 +64,7 @@ npm run dev           # http://localhost:3000
 ### Tests
 
 ```bash
-npm test              # vitest (fees, state machine, moderation, trust levels, email verification, payments with Stripe mocked)
+npm test              # vitest (fees, state machine, moderation, trust levels, email verification, password reset, payments with Stripe mocked)
 npx tsc --noEmit      # type check
 npm run build         # production build
 ```

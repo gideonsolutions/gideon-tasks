@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,11 @@ export function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Min 8 characters"
       />
+      <p className="text-right text-sm">
+        <Link href="/forgot-password" className="text-blue-600 hover:underline">
+          Forgot password?
+        </Link>
+      </p>
       <Button type="submit" loading={loading} className="w-full">
         Sign In
       </Button>

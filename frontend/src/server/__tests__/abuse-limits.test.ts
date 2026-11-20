@@ -1,10 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
+  PASSWORD_RESET_EMAILS_PER_ACCOUNT_PER_DAY,
+  PASSWORD_RESET_EMAIL_MIN_INTERVAL_SECS,
+  PASSWORD_RESET_REQUESTS_PER_IP_PER_HOUR,
   REGISTRATIONS_PER_IP_PER_HOUR,
   VERIFICATION_EMAILS_PER_ACCOUNT_PER_DAY,
   VERIFICATION_EMAILS_PER_IP_PER_HOUR,
   VERIFICATION_EMAIL_MIN_INTERVAL_SECS,
   clientIp,
+  passwordResetEmailDecision,
+  passwordResetRequestDecision,
   registrationDecision,
   verificationEmailDecision,
 } from "../abuse-limits";
@@ -57,6 +62,39 @@ describe("verificationEmailDecision", () => {
     const busy = { ...fresh, fromIpLastHour: VERIFICATION_EMAILS_PER_IP_PER_HOUR };
     expect(verificationEmailDecision(busy).allowed).toBe(false);
     expect(verificationEmailDecision({ ...busy, fromIpLastHour: null }).allowed).toBe(true);
+  });
+});
+
+describe("password reset limits", () => {
+  it("mirror the verification email limits", () => {
+    expect(PASSWORD_RESET_EMAIL_MIN_INTERVAL_SECS).toBe(VERIFICATION_EMAIL_MIN_INTERVAL_SECS);
+    expect(PASSWORD_RESET_EMAILS_PER_ACCOUNT_PER_DAY).toBe(VERIFICATION_EMAILS_PER_ACCOUNT_PER_DAY);
+    expect(PASSWORD_RESET_REQUESTS_PER_IP_PER_HOUR).toBe(VERIFICATION_EMAILS_PER_IP_PER_HOUR);
+  });
+
+  it("cap requests per IP per hour, and skip that check without an IP", () => {
+    expect(passwordResetRequestDecision(PASSWORD_RESET_REQUESTS_PER_IP_PER_HOUR - 1).allowed).toBe(true);
+    const blocked = passwordResetRequestDecision(PASSWORD_RESET_REQUESTS_PER_IP_PER_HOUR);
+    expect(blocked.allowed).toBe(false);
+    if (!blocked.allowed) expect(blocked.reason).not.toMatch(/account/i);
+    expect(passwordResetRequestDecision(null).allowed).toBe(true);
+  });
+
+  it("space out emails to one account and cap them per day", () => {
+    expect(passwordResetEmailDecision({ secondsSinceLast: null, sentToAccountLastDay: 0 }).allowed).toBe(true);
+    expect(passwordResetEmailDecision({ secondsSinceLast: 10, sentToAccountLastDay: 1 }).allowed).toBe(false);
+    expect(
+      passwordResetEmailDecision({
+        secondsSinceLast: PASSWORD_RESET_EMAIL_MIN_INTERVAL_SECS,
+        sentToAccountLastDay: 1,
+      }).allowed,
+    ).toBe(true);
+    expect(
+      passwordResetEmailDecision({
+        secondsSinceLast: 3600,
+        sentToAccountLastDay: PASSWORD_RESET_EMAILS_PER_ACCOUNT_PER_DAY,
+      }).allowed,
+    ).toBe(false);
   });
 });
 
