@@ -9,6 +9,17 @@ function required(name: string): string {
 const DEFAULT_EMAIL_FROM = "Gideon Tasks <no-reply@gideontasks.com>";
 
 /**
+ * This site's origin, for links that leave the app (emails, Stripe redirects). Production sets
+ * BASE_URL. A Vercel preview, which has none, uses its branch's stable address
+ * (gideon-tasks-git-<branch>-….vercel.app), or else the deployment's own; local dev uses localhost.
+ */
+export function baseUrlFrom(e: Record<string, string | undefined>): string {
+  const preview = e.VERCEL_ENV === "preview" ? e.VERCEL_BRANCH_URL || e.VERCEL_URL : undefined;
+  const url = e.BASE_URL || e.NEXT_PUBLIC_SITE_URL || (preview ? `https://${preview}` : "http://localhost:3000");
+  return url.replace(/\/+$/, "");
+}
+
+/**
  * Server configuration. The secrets are read when first used, not when this module loads: `next build`
  * imports every route to collect its configuration, and a build (a Vercel preview, say) must not need
  * production secrets. A request that needs a missing one fails with "<NAME> must be set".
@@ -28,11 +39,7 @@ export const env = {
   get stripeWebhookSecret(): string {
     return required("STRIPE_WEBHOOK_SECRET");
   },
-  baseUrl: (
-    process.env.BASE_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "http://localhost:3000"
-  ).replace(/\/+$/, ""),
+  baseUrl: baseUrlFrom(process.env),
   // Optional at boot so builds and local dev work without it; src/server/email.ts
   // refuses to run without it in production.
   resendApiKey: process.env.RESEND_API_KEY || null,
