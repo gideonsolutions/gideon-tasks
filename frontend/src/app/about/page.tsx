@@ -83,12 +83,16 @@ const faqs: QA[] = [
     q: "How does the money flow?",
     a: (
       <>
-        When a requester picks a doer, the requester’s card is authorized —
-        not yet charged — for the full amount. When the doer confirms they’re
-        starting work, the payment is captured into escrow. When the requester
-        approves completion, the doer is paid out to their Stripe Connect
-        account. If there is a dispute, an admin reviews and either pays the
-        doer or refunds the requester.
+        Requesters save a card first; Stripe stores it, not Gideon Tasks.
+        When a requester picks a doer, the card is authorized — not yet
+        charged — for the full amount, and the bank may ask the requester to
+        confirm the payment. When the doer confirms they’re starting work, the
+        payment is captured into escrow; doers must set up payouts with
+        Stripe before they can start. When the requester approves completion,
+        the doer is paid out to their Stripe Connect account. If the requester
+        cancels before work starts, the hold is released. If there is a
+        dispute, an admin reviews and either pays the doer or refunds the
+        requester.
       </>
     ),
   },

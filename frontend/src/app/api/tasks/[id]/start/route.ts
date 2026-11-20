@@ -2,7 +2,7 @@ import { handle, notFound, forbidden } from "@/server/errors";
 import { execute, queryOne } from "@/server/db";
 import { requireAuth } from "@/server/auth";
 import { transitionTo, type TaskStatus } from "@/server/state-machine";
-import { capturePayment } from "@/server/payments";
+import { assertDoerCanBePaid, capturePayment } from "@/server/payments";
 import { logAudit } from "@/server/audit";
 import { ok } from "@/server/route-helpers";
 
@@ -24,6 +24,9 @@ export async function POST(
       throw forbidden("Not the assigned doer");
     transitionTo(task.status, "in_progress");
 
+    // Check payouts before taking the requester's money, so the transfer on
+    // approval can reach the doer.
+    await assertDoerCanBePaid(auth.userId);
     await capturePayment(id);
     await execute(
       `UPDATE tasks SET status = 'in_progress', updated_at = now() WHERE id = $1`,

@@ -7,6 +7,7 @@ import { useApi } from "@/lib/hooks/use-api";
 import { TaskDetail } from "@/components/tasks/task-detail";
 import { TaskActions } from "@/components/tasks/task-actions";
 import { ApplyForm } from "@/components/applications/apply-form";
+import { PayoutNotice } from "@/components/stripe/payout-notice";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -50,6 +51,9 @@ export default function TaskPage({
   return (
     <div className="max-w-3xl space-y-6">
       <TaskDetail task={task} />
+      {task.status === "assigned" && !!user && task.assigned_doer_id === user.id && (
+        <PayoutNotice />
+      )}
       <div className="flex items-center gap-3">
         <TaskActions task={task} role={role} onUpdate={refetch} />
         {task.status === "draft" && role === "requester" && (

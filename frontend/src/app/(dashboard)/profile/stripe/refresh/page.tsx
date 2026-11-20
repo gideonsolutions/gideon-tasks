@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import * as usersApi from "@/lib/api/users";
 
+/**
+ * Stripe's refresh_url: the onboarding link expired or was already used.
+ * Ask for a new link and go straight back to Stripe.
+ */
 export default function StripeRefreshPage() {
   const router = useRouter();
+  const started = useRef(false);
 
   useEffect(() => {
+    // Account links are single-use; do not create two in development's
+    // double-run of effects.
+    if (started.current) return;
+    started.current = true;
     usersApi
       .initiateStripeConnect()
       .then((res) => {

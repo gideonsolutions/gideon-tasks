@@ -48,6 +48,8 @@ export interface User {
   email_verified: boolean;
   phone_verified: boolean;
   stripe_customer_id: string | null;
+  /** The saved card used for bookings (a Stripe PaymentMethod ID). */
+  stripe_payment_method_id: string | null;
   stripe_connect_account_id: string | null;
   id_verified_at: string | null;
   is_admin: boolean;
@@ -360,9 +362,37 @@ export interface StripeConnectResponse {
 }
 
 export interface StripeConnectStatus {
-  charges_enabled: boolean;
+  connected: boolean;
+  details_submitted: boolean;
+  /** The account can receive transfers from Gideon Tasks. */
+  transfers_active: boolean;
   payouts_enabled: boolean;
+  /** Transfers and payouts both work: the doer can start tasks and be paid. */
+  ready: boolean;
+  /** Stripe still needs information: send the doer back through onboarding. */
+  needs_more_info: boolean;
+  /** Doer accounts only request transfers, so this is normally false. */
+  charges_enabled: boolean;
 }
+
+// ─── Payments ────────────────────────────────────────────
+
+export interface SavedCard {
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+}
+
+export type AssignTaskResponse =
+  | { status: "assigned"; message: string }
+  | {
+      status: "requires_action";
+      message: string;
+      /** Pass to stripe.handleNextAction, then call assign again. */
+      payment_client_secret: string;
+      payment_intent_id: string;
+    };
 
 // ─── API Error ───────────────────────────────────────────
 

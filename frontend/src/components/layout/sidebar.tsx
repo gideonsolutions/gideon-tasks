@@ -9,6 +9,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/tasks/new", label: "Post a Task" },
   { href: "/profile", label: "My Profile" },
+  { href: "/profile/payment", label: "Payment Card" },
   { href: "/profile/stripe", label: "Stripe Connect" },
   { href: "/invites", label: "Invites" },
   { href: "/attestations", label: "Attestations" },

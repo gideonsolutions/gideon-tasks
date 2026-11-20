@@ -254,6 +254,10 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 
 CREATE INDEX IF NOT EXISTS idx_email_verifications_user_id_created_at ON email_verifications(user_id, created_at);
 
+-- The requester's saved card for bookings (a Stripe PaymentMethod attached
+-- to users.stripe_customer_id). Card details stay with Stripe.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_payment_method_id TEXT;
+
 -- Revoke UPDATE and DELETE on audit_log via a trigger (defense in depth)
 CREATE OR REPLACE FUNCTION prevent_audit_log_mutation() RETURNS TRIGGER AS $$
 BEGIN
