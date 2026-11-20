@@ -242,6 +242,18 @@ CREATE TABLE refresh_tokens (
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
 
+-- Email Verifications (single-use links; only the SHA-256 hash of the token is stored)
+CREATE TABLE IF NOT EXISTS email_verifications (
+    id          UUID PRIMARY KEY,
+    user_id     UUID NOT NULL REFERENCES users(id),
+    token_hash  TEXT UNIQUE NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used_at     TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_verifications_user_id_created_at ON email_verifications(user_id, created_at);
+
 -- Revoke UPDATE and DELETE on audit_log via a trigger (defense in depth)
 CREATE OR REPLACE FUNCTION prevent_audit_log_mutation() RETURNS TRIGGER AS $$
 BEGIN

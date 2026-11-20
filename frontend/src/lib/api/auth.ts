@@ -7,6 +7,8 @@ import type {
   RefreshRequest,
   RefreshResponse,
   VerifyEmailRequest,
+  VerifyEmailResponse,
+  ResendVerificationResponse,
   VerifyPhoneRequest,
 } from "@/lib/types";
 
@@ -26,8 +28,12 @@ export function refresh(data: RefreshRequest): Promise<RefreshResponse> {
   return apiClient.post("/auth/refresh", data);
 }
 
-export function verifyEmail(data: VerifyEmailRequest): Promise<void> {
+export function verifyEmail(data: VerifyEmailRequest): Promise<VerifyEmailResponse> {
   return apiClient.post("/auth/verify-email", data);
+}
+
+export function resendVerification(): Promise<ResendVerificationResponse> {
+  return apiClient.post("/auth/resend-verification");
 }
 
 export function verifyPhone(data: VerifyPhoneRequest): Promise<void> {

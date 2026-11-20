@@ -14,8 +14,9 @@ export async function POST(
     const auth = await requireAuth(req);
     const { id } = await params;
 
+    // Attestors are matched by email, so only a confirmed address counts.
     const user = await queryOne<{ email: string }>(
-      `SELECT email FROM users WHERE id = $1`,
+      `SELECT email FROM users WHERE id = $1 AND email_verified = true`,
       [auth.userId],
     );
     if (!user) throw forbidden("Not an attestor");

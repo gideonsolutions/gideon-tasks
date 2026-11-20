@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { RegisterForm } from "@/components/auth/register-form";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -19,6 +20,12 @@ export default function InvitePage({
     [code],
   );
 
+  const problem = error
+    ? (error.error ?? "Invalid or expired invite code.")
+    : invite && !invite.valid
+      ? "This invite has already been used or has expired."
+      : null;
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -32,12 +39,27 @@ export default function InvitePage({
               <div className="flex justify-center py-8">
                 <Spinner />
               </div>
-            ) : error ? (
-              <div className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
-                {error.error ?? "Invalid or expired invite code."}
+            ) : problem ? (
+              <div className="space-y-4">
+                <div className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+                  {problem}
+                </div>
+                <p className="text-sm text-gray-600">
+                  Invites are optional. You can still{" "}
+                  <Link href="/register" className="text-blue-600 hover:underline">
+                    create an account without one
+                  </Link>
+                  .
+                </p>
               </div>
             ) : invite ? (
-              <RegisterForm inviteCode={code} />
+              <>
+                <p className="mb-4 text-sm text-gray-600">
+                  Signing up with this invite asks the organization that issued
+                  it to vouch for you, which raises your trust on Gideon Tasks.
+                </p>
+                <RegisterForm inviteCode={code} />
+              </>
             ) : null}
           </CardContent>
         </Card>

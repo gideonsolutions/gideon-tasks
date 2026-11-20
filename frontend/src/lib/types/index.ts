@@ -298,7 +298,8 @@ export interface ModerationLogEntry {
 // ─── Auth ────────────────────────────────────────────────
 
 export interface RegisterRequest {
-  invite_code: string;
+  /** Optional: an invite lets an attestor vouch for the new account. */
+  invite_code?: string;
   legal_first_name: string;
   legal_last_name: string;
   email: string;
@@ -309,6 +310,9 @@ export interface RegisterRequest {
 export interface RegisterResponse {
   user_id: string;
   message: string;
+  /** True for sign-ups without an invite: the email must be confirmed by link. */
+  email_verification_required: boolean;
+  verification_email_sent: boolean;
 }
 
 export interface LoginRequest {
@@ -332,7 +336,17 @@ export interface RefreshResponse {
 }
 
 export interface VerifyEmailRequest {
-  code: string;
+  token: string;
+}
+
+export interface VerifyEmailResponse {
+  message: string;
+  already_verified: boolean;
+}
+
+export interface ResendVerificationResponse {
+  message: string;
+  already_verified: boolean;
 }
 
 export interface VerifyPhoneRequest {

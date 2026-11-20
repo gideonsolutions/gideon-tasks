@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { EmailVerificationNotice } from "@/components/auth/email-verification-notice";
+import { useAuth } from "@/lib/hooks/use-auth";
 import { createApplication } from "@/lib/api/applications";
 import type { ApiError } from "@/lib/types";
 
@@ -17,6 +19,11 @@ export function ApplyForm({ taskId, onSuccess }: ApplyFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { addToast } = useToast();
+  const { user } = useAuth();
+
+  if (user && !user.email_verified) {
+    return <EmailVerificationNotice purpose="to apply for tasks" />;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/hooks/use-auth";
-import type { ApiError } from "@/lib/types";
+import type { ApiError, RegisterResponse } from "@/lib/types";
 
 interface RegisterFormProps {
   inviteCode?: string;
@@ -22,8 +22,8 @@ export function RegisterForm({ inviteCode = "" }: RegisterFormProps) {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<RegisterResponse | null>(null);
   const { register } = useAuth();
-  const router = useRouter();
 
   function update(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -35,14 +35,40 @@ export function RegisterForm({ inviteCode = "" }: RegisterFormProps) {
     setLoading(true);
 
     try {
-      await register(form);
-      router.push("/register/verify");
+      const code = form.invite_code.trim();
+      setResult(await register({ ...form, invite_code: code || undefined }));
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.error ?? "Registration failed");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (result) {
+    return (
+      <div className="space-y-4">
+        <div
+          role="status"
+          className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800"
+        >
+          <p className="font-medium">{result.message}</p>
+          {result.email_verification_required && result.verification_email_sent && (
+            <p className="mt-2">
+              We sent it to {form.email}. The link expires in 24 hours. You can
+              sign in now, but you need to confirm your email address before
+              you can post or apply for tasks.
+            </p>
+          )}
+        </div>
+        <Link
+          href="/login"
+          className="inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Sign in
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -52,14 +78,6 @@ export function RegisterForm({ inviteCode = "" }: RegisterFormProps) {
           {error}
         </div>
       )}
-      <Input
-        id="invite_code"
-        label="Invite Code"
-        required
-        value={form.invite_code}
-        onChange={(e) => update("invite_code", e.target.value)}
-        placeholder="Enter your invite code"
-      />
       <div className="grid grid-cols-2 gap-4">
         <Input
           id="legal_first_name"
@@ -104,6 +122,21 @@ export function RegisterForm({ inviteCode = "" }: RegisterFormProps) {
         onChange={(e) => update("password", e.target.value)}
         placeholder="Min 8 characters"
       />
+      <div className="space-y-1">
+        <Input
+          id="invite_code"
+          label="Invite Code (optional)"
+          value={form.invite_code}
+          onChange={(e) => update("invite_code", e.target.value)}
+          placeholder="Leave blank if you don't have one"
+          aria-describedby="invite_code_help"
+        />
+        <p id="invite_code_help" className="text-xs text-gray-500">
+          Invites come from a church, nonprofit or other organization that
+          vouches for you, which raises your trust. You can sign up without
+          one.
+        </p>
+      </div>
       <Button type="submit" loading={loading} className="w-full">
         Create Account
       </Button>

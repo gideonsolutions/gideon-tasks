@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useApi } from "@/lib/hooks/use-api";
 import { TaskList } from "@/components/tasks/task-list";
+import { EmailVerificationNotice } from "@/components/auth/email-verification-notice";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { TRUST_LEVEL_NAMES, GIDEON_FEE_BPS } from "@/lib/constants";
@@ -69,6 +70,8 @@ export default function DashboardPage() {
           <span className="font-medium">{TRUST_LEVEL_NAMES[trustLevel] ?? "Unknown"}</span>
         </p>
       </div>
+
+      <EmailVerificationNotice />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

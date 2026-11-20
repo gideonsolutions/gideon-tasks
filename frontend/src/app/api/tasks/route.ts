@@ -14,6 +14,7 @@ import {
   feeBpsForVolume,
 } from "@/server/fees";
 import { platformVolumeCents } from "@/server/platform-volume";
+import { requireVerifiedEmail } from "@/server/email-verification";
 import { ok, parseBody } from "@/server/route-helpers";
 
 export const runtime = "nodejs";
@@ -36,11 +37,9 @@ export async function POST(req: Request) {
     const auth = await requireAuth(req);
     const body = await parseBody(req, CreateSchema);
 
-    if (!canPostTasks(auth.trustLevel)) {
-      throw trustLevelInsufficient("Trust Level 1 required to post tasks");
-    }
+    const emailVerified = await requireVerifiedEmail(auth.userId, "post");
     const maxActive = maxActivePosted(auth.trustLevel);
-    if (maxActive == null) {
+    if (!canPostTasks(auth.trustLevel, emailVerified) || maxActive == null) {
       throw trustLevelInsufficient("Cannot post tasks at this trust level");
     }
 
@@ -50,7 +49,9 @@ export async function POST(req: Request) {
       [auth.userId],
     );
     if ((activeCount?.count ?? 0) >= maxActive) {
-      throw badRequest(`Maximum active tasks reached (${maxActive})`);
+      throw badRequest(
+        `Maximum active tasks reached (${maxActive} at your trust level)`,
+      );
     }
 
     if (body.price_cents < MIN_TASK_PRICE_CENTS) {

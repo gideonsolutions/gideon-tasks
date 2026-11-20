@@ -6,7 +6,9 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import { useApi } from "@/lib/hooks/use-api";
 import { TaskDetail } from "@/components/tasks/task-detail";
 import { TaskActions } from "@/components/tasks/task-actions";
+import { ApplyForm } from "@/components/applications/apply-form";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import type { UserRole } from "@/lib/utils/task-status";
 import * as tasksApi from "@/lib/api/tasks";
@@ -73,6 +75,16 @@ export default function TaskPage({
           </Link>
         )}
       </div>
+      {task.status === "published" && user && task.requester_id !== user.id && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Apply for this task</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ApplyForm taskId={id} onSuccess={refetch} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

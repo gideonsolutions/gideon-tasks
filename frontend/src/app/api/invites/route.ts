@@ -18,8 +18,9 @@ interface AttestorRow {
 }
 
 async function getAttestorForUser(userId: string): Promise<AttestorRow> {
+  // Attestors are matched by email, so only a confirmed address counts.
   const user = await queryOne<{ email: string }>(
-    `SELECT email FROM users WHERE id = $1`,
+    `SELECT email FROM users WHERE id = $1 AND email_verified = true`,
     [userId],
   );
   if (!user) throw forbidden("Not an attestor");
