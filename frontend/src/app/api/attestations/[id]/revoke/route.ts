@@ -2,6 +2,7 @@ import { handle, notFound, forbidden } from "@/server/errors";
 import { execute, queryOne } from "@/server/db";
 import { requireAuth } from "@/server/auth";
 import { logAudit } from "@/server/audit";
+import { updateUserTrustLevel } from "@/server/trust";
 import { ok } from "@/server/route-helpers";
 
 export const runtime = "nodejs";
@@ -36,6 +37,8 @@ export async function POST(
     await logAudit(auth.userId, "attestation.revoked", "attestation", id, null, {
       user_id: attestation.user_id,
     });
+    // Revoking removes the shortcut to level 1, so recompute the level.
+    await updateUserTrustLevel(attestation.user_id);
     return ok({ message: "Attestation revoked" });
   });
 }

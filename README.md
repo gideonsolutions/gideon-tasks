@@ -25,7 +25,7 @@ The app is a single Next.js project. Frontend pages live under `frontend/src/app
 - Doers set up payouts through Stripe Connect (Express dashboard, transfers only). Starting a task requires an account whose transfers and payouts are active, because starting is what charges the requester. The transfer on approval is tied to the captured charge (`source_transaction`).
 - Every Stripe call is in `frontend/src/server/payments.ts` and uses an idempotency key derived from our own IDs; the decisions around them are pure functions in `frontend/src/server/payment-rules.ts`.
 
-**Trust system** — Four levels (0–3) computed from completed tasks, dispute history, account age, and review scores. Level 3 requires admin sign-off. Every level, including level 0, can post and apply once the account's email is verified; level 0 is limited to tasks paying up to $100 and 2 active posted tasks.
+**Trust system** — Four levels (0–3) computed from completed tasks, dispute history, account age, review scores, and (for level 1 only) a confirmed attestation. Level 3 requires admin sign-off. Every level, including level 0, can post and apply once the account's email is verified; level 0 is limited to tasks paying up to $100 and 2 active posted tasks.
 
 **Content moderation** — Regex-based pipeline auto-approves, flags, or rejects task and message content.
 
@@ -35,7 +35,7 @@ The app is a single Next.js project. Frontend pages live under `frontend/src/app
 
 **Password reset** — "Forgot password?" on the sign-in page emails a single-use link (32 random bytes, stored as a SHA-256 hash, valid for 1 hour). The request always gets the same answer, and the account lookup and email happen after the response, so the form never reveals whether an address has an account. Resetting marks the email verified, retires the account's other reset links and revokes every refresh token; existing access tokens lapse within `JWT_ACCESS_EXPIRY_SECS` (15 minutes by default). Limits mirror the verification emails: 20 requests per IP per hour, and per account one email a minute and 5 a day.
 
-**Invites and attestations (optional)** — An attestor (a church, nonprofit or organization) can issue invite codes. Signing up with one creates an attestation that the attestor confirms, which vouches for the member and raises their trust.
+**Invites and attestations (optional)** — An attestor (a church, nonprofit or organization) can issue invite codes. Signing up with one creates an attestation that the attestor confirms, which vouches for the member. A confirmed, unrevoked attestation from an active attestor halves the completed-task and account-age requirements for trust level 1 (3 tasks and 15 days instead of 5 and 30); it never skips the no-lost-disputes condition and does not affect levels 2 and 3. The rule is `computeTrustLevel` in `frontend/src/server/trust-levels.ts`.
 
 **Reviews** — Four-dimension ratings: reliability, quality, communication, integrity.
 
