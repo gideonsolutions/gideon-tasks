@@ -88,6 +88,14 @@ export const idempotencyKeys = {
   refund: (paymentIntentId: string) => `${KEY_PREFIX}:refund:${paymentIntentId}`,
   /** One transfer per payment row, whatever happens to the request. */
   transfer: (paymentId: string) => `${KEY_PREFIX}:transfer:${paymentId}`,
+  /**
+   * Gideon Clerk: one hold per booking row (a new booking is a new row), and
+   * one capture per booking and amount.
+   */
+  clerkAuthorize: (a: { bookingId: string; paymentMethodId: string; amountCents: number }) =>
+    `${KEY_PREFIX}:clerk-authorize:${a.bookingId}:${a.paymentMethodId}:${a.amountCents}`,
+  clerkCapture: (paymentIntentId: string, amountCents: number) =>
+    `${KEY_PREFIX}:clerk-capture:${paymentIntentId}:${amountCents}`,
 };
 
 /** Groups the charge and the doer's transfer in the Stripe Dashboard. */
@@ -251,6 +259,9 @@ export const MESSAGES = {
   authorizationExpired:
     "The hold on the requester's card has expired, so the payment could not be taken. The requester needs to cancel this task and book again.",
   doerAccountMissing: "The doer has not set up payouts yet, so the payment cannot be released.",
+  clerkNoCard: "Add a payment card before you book Gideon Clerk. Go to Payment Card in the menu.",
+  clerkHoldExpired:
+    "The hold on the customer's card has lapsed, so nothing can be charged. Cancel this booking.",
 };
 
 /**

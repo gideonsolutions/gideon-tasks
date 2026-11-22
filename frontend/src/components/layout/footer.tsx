@@ -30,6 +30,11 @@ export function Footer() {
           >
             Gideon Solutions, LLC
           </a>
+          , which also offers{" "}
+          <Link href="/clerk" className="text-blue-600 hover:underline">
+            Gideon Clerk
+          </Link>
+          : help with paperwork and online accounts.
         </p>
       </div>
     </footer>
