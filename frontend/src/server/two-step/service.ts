@@ -40,8 +40,7 @@ export const TWO_STEP_ISSUER = "Gideon Tasks";
 export const WRONG_CODE =
   "That code isn't right. Enter the code your app shows now, or one of your recovery codes";
 
-export const SET_UP_FIRST =
-  "Set up two-step sign-in first. Go to /profile/security, then sign in again";
+export const SET_UP_FIRST = "Set up two-step sign-in first, at /profile/security";
 
 export const SIGN_IN_AGAIN =
   "Sign out and sign in again with your two-step code to do this";
