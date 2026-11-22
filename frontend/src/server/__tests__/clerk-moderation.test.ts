@@ -69,6 +69,23 @@ describe("moderateClerkDescription", () => {
     expect(moderateClerkDescription("Help me with a form")).toMatchObject({ kind: "flagged" });
   });
 
+  it("allows paperwork that mentions children, such as a child care assistance application", () => {
+    for (const text of [
+      "I need help applying for child care assistance for my two kids through the state website.",
+      "Help me fill in my daughter's school enrollment forms; my child starts in January.",
+      "I'm applying for a daycare subsidy and the form asks about my children's ages.",
+    ]) {
+      expect(moderateClerkDescription(text)).toEqual({ kind: "clean" });
+    }
+  });
+
+  it("keeps the child rules for marketplace content", async () => {
+    const { moderateContent } = await import("../moderation");
+    expect(
+      moderateContent("I need help applying for child care assistance for my two kids through the state website."),
+    ).toMatchObject({ kind: "rejected" });
+  });
+
   it("checks for SSNs before phone numbers, so the reason is the specific one", () => {
     expect(moderateClerkDescription(`${CLEAN} 123-45-6789`)).toMatchObject({
       reason: CLERK_SENSITIVE_NUMBER_REASON,

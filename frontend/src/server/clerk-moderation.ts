@@ -10,6 +10,9 @@ import { moderateContent, type ModerationResult } from "./moderation";
  * general SSN rule in moderation.ts when there is one: replace SSN_PATTERNS
  * with that rule and keep the Clerk-specific message.
  *
+ * The site's two child rules don't apply here (see ModerationContext.clerkBooking):
+ * a child care assistance application is ordinary Clerk paperwork.
+ *
  * Passwords and codes: "password: …", "PIN = …" and the like. Gideon Clerk
  * never receives or stores a password, so one in the description is refused
  * rather than saved.
@@ -36,5 +39,5 @@ export function moderateClerkDescription(text: string): ModerationResult {
   for (const p of SECRET_PATTERNS) {
     if (p.test(text)) return { kind: "rejected", reason: CLERK_SECRET_REASON };
   }
-  return moderateContent(text);
+  return moderateContent(text, { clerkBooking: true });
 }
