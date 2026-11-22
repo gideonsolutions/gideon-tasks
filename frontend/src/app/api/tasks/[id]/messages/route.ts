@@ -31,8 +31,13 @@ async function fetchTaskParticipants(id: string, userId: string) {
     requester_id: string;
     assigned_doer_id: string | null;
     status: string;
+    for_minor: boolean;
+    category_slug: string | null;
   }>(
-    `SELECT requester_id, assigned_doer_id, status FROM tasks WHERE id = $1`,
+    `SELECT t.requester_id, t.assigned_doer_id, t.status, t.for_minor,
+            c.slug AS category_slug
+     FROM tasks t LEFT JOIN categories c ON c.id = t.category_id
+     WHERE t.id = $1`,
     [id],
   );
   if (!task) throw notFound("Task not found");
@@ -74,7 +79,10 @@ export async function POST(
       throw badRequest("Cannot send messages in current task state");
     }
 
-    const m = moderateContent(body.body);
+    const m = moderateContent(body.body, {
+      categorySlug: task.category_slug,
+      forMinor: task.for_minor,
+    });
     if (m.kind === "rejected") throw contentRejected(m.reason);
 
     const sanitized = stripContactInfo(body.body);

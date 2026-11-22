@@ -5,6 +5,7 @@ import { transitionTo, type TaskStatus } from "@/server/state-machine";
 import { authorizeEscrowPayment } from "@/server/payments";
 import { finalizeAssignment } from "@/server/assignment";
 import { ok } from "@/server/route-helpers";
+import { requireBackgroundCheck } from "@/server/minor-safeguards";
 
 export const runtime = "nodejs";
 
@@ -32,8 +33,9 @@ export async function POST(
       price_cents: number;
       pricing_mode: "doer_receives" | "requester_pays";
       assigned_doer_id: string | null;
+      for_minor: boolean;
     }>(
-      `SELECT requester_id, status, price_cents, pricing_mode, assigned_doer_id
+      `SELECT requester_id, status, price_cents, pricing_mode, assigned_doer_id, for_minor
        FROM tasks WHERE id = $1`,
       [id],
     );
@@ -60,6 +62,9 @@ export async function POST(
 
     transitionTo(task.status, "assigned");
     if (app.status !== "pending") throw notFound("Application not found");
+    // Checked again here, before the card is authorized: the tutor's check
+    // may have been cleared since they applied.
+    if (task.for_minor) await requireBackgroundCheck(app.doer_id);
 
     const result = await authorizeEscrowPayment({
       taskId: id,

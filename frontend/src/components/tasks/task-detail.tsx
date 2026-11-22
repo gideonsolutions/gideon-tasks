@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaskStatusBadge } from "./task-status-badge";
 import { FeeBreakdownDisplay } from "./fee-breakdown";
 import { TaskQuestions } from "./task-questions";
+import { GuardianRules } from "./guardian-rules";
 import { formatCents, formatDate, formatDateTime } from "@/lib/utils/format";
 import { calculateFees } from "@/lib/utils/fees";
 import { GIDEON_FEE_BPS } from "@/lib/constants";
@@ -37,6 +38,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {task.for_minor && <GuardianRules />}
           <div>
             <h4 className="text-sm font-medium text-gray-500 mb-1">Description</h4>
             <p className="text-gray-700 whitespace-pre-wrap">{task.description}</p>
@@ -65,7 +67,11 @@ export function TaskDetail({ task }: TaskDetailProps) {
             <div>
               <h4 className="text-sm font-medium text-gray-500 mb-1">Location</h4>
               <p className="text-gray-700">
-                {task.location_type === "remote" ? "Remote" : "In Person"}
+                {task.location_type === "remote"
+                  ? "Remote"
+                  : task.for_minor
+                    ? "In person, at a public place"
+                    : "In Person"}
                 {task.location_address && ` — ${task.location_address}`}
               </p>
             </div>

@@ -10,6 +10,7 @@ import { requireAuth, newId } from "@/server/auth";
 import { moderateContent } from "@/server/moderation";
 import { logAudit } from "@/server/audit";
 import { ok, parseBody } from "@/server/route-helpers";
+import { requireBackgroundCheck } from "@/server/minor-safeguards";
 
 export const runtime = "nodejs";
 
@@ -43,7 +44,14 @@ export async function POST(
     const task = await queryOne<{
       requester_id: string;
       status: string;
-    }>(`SELECT requester_id, status FROM tasks WHERE id = $1`, [id]);
+      for_minor: boolean;
+      category_slug: string | null;
+    }>(
+      `SELECT t.requester_id, t.status, t.for_minor, c.slug AS category_slug
+       FROM tasks t LEFT JOIN categories c ON c.id = t.category_id
+       WHERE t.id = $1`,
+      [id],
+    );
     if (!task) throw notFound("Task not found");
     if (task.requester_id === auth.userId) {
       throw badRequest("Cannot ask a question on your own task");
@@ -52,7 +60,13 @@ export async function POST(
       throw badRequest("Questions are only allowed on published tasks");
     }
 
-    const moderation = moderateContent(body.question_body);
+    // Only tutors who could be booked may ask about tutoring for a child.
+    if (task.for_minor) await requireBackgroundCheck(auth.userId);
+
+    const moderation = moderateContent(body.question_body, {
+      categorySlug: task.category_slug,
+      forMinor: task.for_minor,
+    });
     if (moderation.kind === "rejected") throw contentRejected(moderation.reason);
 
     const qid = newId();

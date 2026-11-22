@@ -33,6 +33,9 @@ interface UserRow {
   stripe_customer_id: string | null;
   stripe_connect_account_id: string | null;
   id_verified_at: string | null;
+  background_check_cleared_at: string | null;
+  /** For admins only: never sent to the user. */
+  background_check_note: string | null;
   is_admin: boolean;
   created_at: string;
   updated_at: string;
@@ -71,8 +74,13 @@ export async function POST(req: Request) {
 
     await logAudit(user.id, "user.login", "user", user.id, null, null);
 
-    const { password_hash: _omit, ...publicUser } = user;
+    const {
+      password_hash: _omit,
+      background_check_note: _note,
+      ...publicUser
+    } = user;
     void _omit;
+    void _note;
     return ok({
       access_token: accessToken,
       refresh_token: refreshToken,

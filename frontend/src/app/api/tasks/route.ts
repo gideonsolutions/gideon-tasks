@@ -16,6 +16,7 @@ import {
 import { platformVolumeCents } from "@/server/platform-volume";
 import { requireVerifiedEmail } from "@/server/email-verification";
 import { ok, parseBody } from "@/server/route-helpers";
+import { categorySlug, minorTaskProblem } from "@/server/minor-safeguards";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,10 @@ const CreateSchema = z.object({
   price_cents: z.number().int(),
   pricing_mode: z.enum(["doer_receives", "requester_pays"]).default("doer_receives"),
   deadline: z.string(),
+  /** "This is for my child under 18; I'm their parent or legal guardian" (Tutoring only). */
+  for_minor: z.boolean().default(false),
+  /** For an in-person task for a child: the poster confirms the address is a public place. */
+  public_place_confirmed: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -80,14 +85,21 @@ export async function POST(req: Request) {
     if (body.location_type === "in_person" && !body.location_address) {
       throw badRequest("Address required for in-person tasks");
     }
+    const minorProblem = minorTaskProblem({
+      forMinor: body.for_minor,
+      categorySlug: body.for_minor ? await categorySlug(body.category_id) : null,
+      locationType: body.location_type,
+      publicPlaceConfirmed: body.public_place_confirmed,
+    });
+    if (minorProblem) throw badRequest(minorProblem);
 
     const taskId = newId();
     await execute(
       `INSERT INTO tasks
         (id, requester_id, title, description, category_id, location_type,
          location_address, location_lat, location_lng, price_cents, pricing_mode,
-         status, deadline, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'draft',$12,now(),now())`,
+         status, deadline, for_minor, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'draft',$12,$13,now(),now())`,
       [
         taskId,
         auth.userId,
@@ -101,6 +113,7 @@ export async function POST(req: Request) {
         body.price_cents,
         body.pricing_mode,
         deadline,
+        body.for_minor,
       ],
     );
 
@@ -108,6 +121,10 @@ export async function POST(req: Request) {
       title: body.title,
       price_cents: body.price_cents,
       pricing_mode: body.pricing_mode,
+      ...(body.for_minor && {
+        for_minor: true,
+        public_place_confirmed: body.location_type === "in_person",
+      }),
     });
 
     const task = await queryOne(`SELECT * FROM tasks WHERE id = $1`, [taskId]);

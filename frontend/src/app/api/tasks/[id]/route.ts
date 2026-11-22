@@ -2,8 +2,10 @@ import { z } from "zod";
 import { handle, notFound, forbidden, badRequest } from "@/server/errors";
 import { execute, queryOne } from "@/server/db";
 import { requireAuth } from "@/server/auth";
+import { logAudit } from "@/server/audit";
 import { MIN_TASK_PRICE_CENTS } from "@/server/fees";
 import { ok, parseBody } from "@/server/route-helpers";
+import { categorySlug, minorTaskProblem } from "@/server/minor-safeguards";
 
 export const runtime = "nodejs";
 
@@ -17,6 +19,9 @@ const UpdateSchema = z.object({
   location_lng: z.number().optional().nullable(),
   price_cents: z.number().int().optional(),
   deadline: z.string().optional(),
+  for_minor: z.boolean().optional(),
+  /** Sent again with every edit of an in-person task for a child. */
+  public_place_confirmed: z.boolean().optional(),
 });
 
 interface TaskRow {
@@ -32,6 +37,7 @@ interface TaskRow {
   price_cents: number;
   status: string;
   deadline: string;
+  for_minor: boolean;
 }
 
 async function fetchTask(id: string): Promise<TaskRow> {
@@ -74,6 +80,7 @@ export async function PATCH(
           : task.location_address,
       price_cents: body.price_cents ?? task.price_cents,
       deadline: body.deadline ? new Date(body.deadline) : new Date(task.deadline),
+      for_minor: body.for_minor ?? task.for_minor,
     };
 
     if (next.price_cents < MIN_TASK_PRICE_CENTS) {
@@ -82,11 +89,20 @@ export async function PATCH(
       );
     }
 
+    const minorProblem = minorTaskProblem({
+      forMinor: next.for_minor,
+      categorySlug: next.for_minor ? await categorySlug(next.category_id) : null,
+      locationType: next.location_type as "remote" | "in_person",
+      publicPlaceConfirmed: body.public_place_confirmed,
+    });
+    if (minorProblem) throw badRequest(minorProblem);
+
     await execute(
       `UPDATE tasks
        SET title=$1, description=$2, category_id=$3, location_type=$4,
-           location_address=$5, price_cents=$6, deadline=$7, updated_at=now()
-       WHERE id=$8`,
+           location_address=$5, price_cents=$6, deadline=$7, for_minor=$8,
+           updated_at=now()
+       WHERE id=$9`,
       [
         next.title,
         next.description,
@@ -95,9 +111,21 @@ export async function PATCH(
         next.location_address,
         next.price_cents,
         next.deadline,
+        next.for_minor,
         id,
       ],
     );
+    if (next.for_minor !== task.for_minor) {
+      // The guardian's tick (or its removal) is a safeguarding record.
+      await logAudit(
+        auth.userId,
+        "task.for_minor_changed",
+        "task",
+        id,
+        { for_minor: task.for_minor },
+        { for_minor: next.for_minor },
+      );
+    }
     return ok(await fetchTask(id));
   });
 }

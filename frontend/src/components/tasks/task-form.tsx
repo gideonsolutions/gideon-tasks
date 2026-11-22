@@ -7,8 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FeeBreakdownDisplay } from "./fee-breakdown";
+import { GuardianRules } from "./guardian-rules";
 import { useToast } from "@/components/ui/toast";
-import { MIN_TASK_PRICE_CENTS } from "@/lib/constants";
+import {
+  GUARDIAN_TICK_LABEL,
+  MIN_TASK_PRICE_CENTS,
+  TUTORING_SLUG,
+} from "@/lib/constants";
 import type {
   CreateTaskRequest,
   ApiError,
@@ -50,6 +55,9 @@ export function TaskForm({
     pricing_mode: (initialData?.pricing_mode ??
       "doer_receives") as PricingMode,
     deadline: initialData?.deadline?.split("T")[0] ?? "",
+    for_minor: initialData?.for_minor ?? false,
+    // Not stored: the poster confirms it again with every save.
+    public_place_confirmed: false,
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,6 +79,11 @@ export function TaskForm({
   }, [initialCategorySlug]);
 
   const priceCents = Math.round(parseFloat(form.price_dollars || "0") * 100);
+  const isTutoring =
+    categories.find((c) => c.id === form.category_id)?.slug === TUTORING_SLUG;
+  // The guardian's tick only counts in Tutoring (the API enforces this too).
+  const forMinor = isTutoring && form.for_minor;
+  const minorInPerson = forMinor && form.location_type === "in_person";
 
   function update<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -88,6 +101,12 @@ export function TaskForm({
       setError(`Minimum amount is $${(MIN_TASK_PRICE_CENTS / 100).toFixed(2)}`);
       return;
     }
+    if (minorInPerson && !form.public_place_confirmed) {
+      setError(
+        "In-person tutoring for a child must be at a public place. Confirm the address is a public place, or choose Remote.",
+      );
+      return;
+    }
 
     setLoading(true);
     try {
@@ -99,7 +118,9 @@ export function TaskForm({
         price_cents: priceCents,
         pricing_mode: form.pricing_mode,
         deadline: new Date(form.deadline).toISOString(),
+        for_minor: forMinor,
       };
+      if (minorInPerson) data.public_place_confirmed = form.public_place_confirmed;
 
       if (form.location_type === "in_person" && form.location_address) {
         data.location_address = form.location_address;
@@ -162,6 +183,19 @@ export function TaskForm({
         onChange={(e) => update("category_id", e.target.value)}
         options={categories.map((c) => ({ value: c.id, label: c.name }))}
       />
+      {isTutoring && (
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input
+            id="for_minor"
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            checked={form.for_minor}
+            onChange={(e) => update("for_minor", e.target.checked)}
+          />
+          <span>{GUARDIAN_TICK_LABEL}</span>
+        </label>
+      )}
+      {forMinor && <GuardianRules inForm />}
       <Select
         id="pricing_mode"
         label="How do you want to set the price?"
@@ -178,19 +212,38 @@ export function TaskForm({
         value={form.location_type}
         onChange={(e) => update("location_type", e.target.value as "remote" | "in_person")}
         options={[
-          { value: "remote", label: "Remote" },
-          { value: "in_person", label: "In Person" },
+          { value: "remote", label: forMinor ? "Remote (online)" : "Remote" },
+          {
+            value: "in_person",
+            label: forMinor ? "In person, at a public place" : "In Person",
+          },
         ]}
       />
       {form.location_type === "in_person" && (
         <Input
           id="location_address"
-          label="Address"
+          label={forMinor ? "Public place (name and address)" : "Address"}
           required
           value={form.location_address}
           onChange={(e) => update("location_address", e.target.value)}
-          placeholder="Full address"
+          placeholder={forMinor ? "e.g. the public library on Main Street" : "Full address"}
         />
+      )}
+      {minorInPerson && (
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input
+            id="public_place_confirmed"
+            type="checkbox"
+            required
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            checked={form.public_place_confirmed}
+            onChange={(e) => update("public_place_confirmed", e.target.checked)}
+          />
+          <span>
+            This is a public place, such as a library, and not anyone&apos;s
+            home.
+          </span>
+        </label>
       )}
       <Input
         id="price"

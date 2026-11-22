@@ -52,10 +52,27 @@ export interface User {
   stripe_payment_method_id: string | null;
   stripe_connect_account_id: string | null;
   id_verified_at: string | null;
+  /** When an admin recorded a cleared background check; null if none. */
+  background_check_cleared_at: string | null;
   is_admin: boolean;
   created_at: string;
   updated_at: string;
 }
+
+/** What /admin/users shows and changes about a user's background check. */
+export interface BackgroundCheckRecord {
+  id: string;
+  legal_first_name: string;
+  legal_last_name: string;
+  email: string;
+  status: UserStatus;
+  background_check_cleared_at: string | null;
+  background_check_note: string | null;
+}
+
+export type BackgroundCheckChange =
+  | { action: "record"; note: string; confirms_identity_and_adult: true }
+  | { action: "clear"; note: string };
 
 export interface PublicUserProfile {
   id: string;
@@ -83,6 +100,8 @@ export interface Task {
   assigned_doer_id: string | null;
   moderation_note: string | null;
   rejection_reason: string | null;
+  /** Tutoring a parent or legal guardian posted for their child under 18. */
+  for_minor: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -98,6 +117,10 @@ export interface CreateTaskRequest {
   price_cents: number;
   pricing_mode?: PricingMode;
   deadline: string;
+  /** "This is for my child under 18; I'm their parent or legal guardian" (Tutoring only). */
+  for_minor?: boolean;
+  /** Required for an in-person task for a child: the address is a public place. */
+  public_place_confirmed?: boolean;
 }
 
 export interface UpdateTaskRequest {
@@ -111,6 +134,8 @@ export interface UpdateTaskRequest {
   price_cents?: number;
   pricing_mode?: PricingMode;
   deadline?: string;
+  for_minor?: boolean;
+  public_place_confirmed?: boolean;
 }
 
 export interface FeeBreakdown {

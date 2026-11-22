@@ -129,8 +129,14 @@ const faqs: QA[] = [
           tutoring
         </Link>
         , computer help, event help, tax prep, and more. Content is auto-moderated when you publish — anything
-        involving minors as task subjects, sexual content, weapons, illegal
-        drugs, gambling, or trafficking is rejected. Contact information
+        involving minors as task subjects, childcare, sexual content, weapons,
+        illegal drugs, gambling, or trafficking is rejected. The one exception
+        for minors is tutoring that a parent or guardian posts for their
+        child, under the{" "}
+        <Link href="/safeguarding" className="text-blue-600 hover:underline">
+          safeguarding rules
+        </Link>
+        . Contact information
         (phone, email, URLs) is not permitted in task descriptions; doers and
         requesters communicate through the platform until they’re matched.
       </>
