@@ -12,6 +12,7 @@ import { stripe } from "./stripe";
 import { siteUrl } from "./env";
 import { logAudit } from "./audit";
 import { badRequest, conflict, forbidden, notFound, paymentError } from "./errors";
+import { clerkAmountCents, formatHours, formatWholeDollars } from "./clerk-rules";
 import {
   ESCROW_CURRENCY,
   ESCROW_PAYMENT_METHOD_TYPES,
@@ -696,4 +697,162 @@ export async function refundPayment(taskId: string): Promise<void> {
     `UPDATE payments SET status = 'refunded', refunded_at = now() WHERE task_id = $1`,
     [taskId],
   );
+}
+
+// ─── Gideon Clerk (the house's own service) ──────────────
+//
+// Gideon Clerk is sold by Gideon Solutions, LLC itself, so its hold is a
+// plain manual-capture PaymentIntent on the platform account: no transfer
+// group, no connected account, no application fee and nothing added for
+// Stripe. The customer is authorized for hours booked × CLERK_HOURLY_CENTS,
+// and after the session only the hours used are captured.
+
+export interface ClerkIntent {
+  id: string;
+  status: IntentStatus;
+  amount: number;
+  amountReceived: number;
+  customerId: string | null;
+  bookingId: string | null;
+  userId: string | null;
+  clientSecret: string | null;
+  /** Stripe's capture_before for the card hold (Unix seconds), when the charge has one. */
+  captureBefore: number | null;
+}
+
+function clerkIntentOf(pi: Stripe.PaymentIntent): ClerkIntent {
+  const charge =
+    pi.latest_charge && typeof pi.latest_charge === "object" ? pi.latest_charge : null;
+  return {
+    id: pi.id,
+    status: pi.status as IntentStatus,
+    amount: pi.amount,
+    amountReceived: pi.amount_received ?? 0,
+    customerId: idOf(pi.customer),
+    bookingId: pi.metadata?.clerk_booking_id ?? null,
+    userId: pi.metadata?.user_id ?? null,
+    clientSecret: pi.client_secret ?? null,
+    captureBefore: charge?.payment_method_details?.card?.capture_before ?? null,
+  };
+}
+
+export type ClerkHoldResult =
+  | { status: "authorized"; intent: ClerkIntent }
+  | { status: "requires_action"; intent: ClerkIntent; clientSecret: string }
+  | { status: "declined"; paymentIntentId: string | null; message: string };
+
+/**
+ * Places the hold for a Gideon Clerk booking on the customer's saved card,
+ * created and confirmed in one call. 3-D Secure, if the bank asks for it, is
+ * completed in the browser with stripe.handleNextAction, as for task
+ * bookings. A decline is returned, not thrown, so the caller can close the
+ * booking row it created first.
+ */
+export async function authorizeClerkHold(input: {
+  bookingId: string;
+  userId: string;
+  hours: number;
+}): Promise<ClerkHoldResult> {
+  const billing = await billingRow(input.userId);
+  const customerId = billing.stripe_customer_id;
+  const paymentMethodId = billing.stripe_payment_method_id;
+  if (!customerId || !paymentMethodId) throw paymentError(MESSAGES.clerkNoCard);
+  const amountCents = clerkAmountCents(input.hours);
+
+  let intent: Stripe.PaymentIntent;
+  try {
+    intent = await stripe().paymentIntents.create(
+      {
+        amount: amountCents,
+        currency: ESCROW_CURRENCY,
+        capture_method: "manual",
+        customer: customerId,
+        payment_method: paymentMethodId,
+        payment_method_types: ESCROW_PAYMENT_METHOD_TYPES,
+        confirm: true,
+        use_stripe_sdk: true,
+        description: `Gideon Clerk, ${formatHours(input.hours)}`,
+        metadata: {
+          clerk_booking_id: input.bookingId,
+          user_id: input.userId,
+          hours_booked: String(input.hours),
+        },
+        // The charge's card details say when the hold lapses (capture_before).
+        expand: ["latest_charge"],
+      },
+      {
+        idempotencyKey: idempotencyKeys.clerkAuthorize({
+          bookingId: input.bookingId,
+          paymentMethodId,
+          amountCents,
+        }),
+      },
+    );
+  } catch (e) {
+    const err = asStripeError(e);
+    if (err.type === "StripeCardError") {
+      return {
+        status: "declined",
+        paymentIntentId: err.payment_intent?.id ?? null,
+        message: MESSAGES.declined(declineDetail(err)),
+      };
+    }
+    throw paymentError(`Stripe PaymentIntent creation failed: ${errorText(e)}`);
+  }
+
+  const live = clerkIntentOf(intent);
+  if (live.status === "requires_capture") return { status: "authorized", intent: live };
+  if (live.status === "requires_action" && live.clientSecret) {
+    return { status: "requires_action", intent: live, clientSecret: live.clientSecret };
+  }
+  return { status: "declined", paymentIntentId: intent.id, message: MESSAGES.declined(undefined) };
+}
+
+/** A Gideon Clerk hold as Stripe reports it now. */
+export async function retrieveClerkIntent(paymentIntentId: string): Promise<ClerkIntent> {
+  try {
+    return clerkIntentOf(
+      await stripe().paymentIntents.retrieve(paymentIntentId, { expand: ["latest_charge"] }),
+    );
+  } catch (e) {
+    throw paymentError(`Could not check the card hold: ${errorText(e)}`);
+  }
+}
+
+/**
+ * Captures the hours used (a partial capture: Stripe releases the rest of
+ * the hold). The caller has already checked the amount with
+ * clerkCapturePlan; Stripe refuses anything above the authorized amount too.
+ */
+export async function captureClerkHold(paymentIntentId: string, amountCents: number): Promise<void> {
+  const s = stripe();
+  try {
+    await s.paymentIntents.capture(
+      paymentIntentId,
+      { amount_to_capture: amountCents },
+      { idempotencyKey: idempotencyKeys.clerkCapture(paymentIntentId, amountCents) },
+    );
+  } catch (e) {
+    // An earlier request may have captured it and then failed before the
+    // database write; Stripe's own state decides.
+    let live: Stripe.PaymentIntent | null = null;
+    try {
+      live = await s.paymentIntents.retrieve(paymentIntentId);
+    } catch {
+      // Fall through to the original error.
+    }
+    if (live?.status === "canceled") throw paymentError(MESSAGES.clerkHoldExpired);
+    if (live?.status === "succeeded") {
+      if (live.amount_received === amountCents) return;
+      throw conflict(
+        `Stripe already captured ${formatWholeDollars(live.amount_received)} for this booking. Record the hours that match that amount.`,
+      );
+    }
+    throw paymentError(`Stripe capture failed: ${errorText(e)}`);
+  }
+}
+
+/** Releases a Gideon Clerk hold. One that is already canceled counts as done. */
+export async function releaseClerkHold(paymentIntentId: string): Promise<void> {
+  await cancelIntent(paymentIntentId);
 }
