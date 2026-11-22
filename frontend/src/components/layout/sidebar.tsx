@@ -22,6 +22,7 @@ const adminItems = [
   { href: "/admin/audit-log", label: "Audit Log" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/verification", label: "Verification" },
+  { href: "/admin/clerk", label: "Gideon Clerk" },
 ];
 
 export function Sidebar() {

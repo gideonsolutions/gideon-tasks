@@ -43,6 +43,8 @@ The app is a single Next.js project. Frontend pages live under `frontend/src/app
 
 **Reviews** — Four-dimension ratings: reliability, quality, communication, integrity.
 
+**Gideon Clerk** — Help with paperwork and online accounts, a service Gideon Solutions, LLC (the company that runs Gideon Tasks) offers itself at `CLERK_HOURLY_CENTS` ($80) an hour, online only. It is not a task: bookings live in `clerk_bookings`, never in the task feed or the categories, and pay no Gideon Tasks fee. Booking places a manual-capture PaymentIntent on the customer's saved card for hours booked × the rate (1 to 4 hours), on the platform account with nothing added; an admin schedules the session at `/admin/clerk` to end a day before the hold lapses and the meeting details are emailed to the customer's verified address; after the session only the whole hours used are captured and Stripe releases the rest. Cancelling before the session releases the hold. The rules are pure functions in `frontend/src/server/clerk-rules.ts`, the bookings in `frontend/src/server/clerk.ts`, and the Stripe calls in `payments.ts` with the rest.
+
 ## Setup
 
 ### Prerequisites
@@ -68,7 +70,7 @@ npm run dev           # http://localhost:3000
 ### Tests
 
 ```bash
-npm test              # vitest (fees, state machine, moderation, trust levels, email verification, password reset, payments with Stripe mocked)
+npm test              # vitest (fees, state machine, moderation, trust levels, email verification, password reset, payments and Gideon Clerk with Stripe mocked)
 npx tsc --noEmit      # type check
 npm run build         # production build
 ```

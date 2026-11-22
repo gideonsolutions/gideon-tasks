@@ -4,6 +4,7 @@ import { execute, queryOne } from "@/server/db";
 import { stripe } from "@/server/stripe";
 import { env } from "@/server/env";
 import { finalizeAssignment } from "@/server/assignment";
+import { handleClerkHoldAuthorizedEvent } from "@/server/clerk";
 
 export const runtime = "nodejs";
 
@@ -64,13 +65,19 @@ export async function POST(req: Request) {
       case "payment_intent.amount_capturable_updated": {
         // The escrow hold is authorized. Normally the browser finishes the
         // assignment right away; this covers a requester who closed the tab
-        // after 3-D Secure.
+        // after 3-D Secure. Gideon Clerk holds (metadata.clerk_booking_id)
+        // are handled the same way for their bookings.
         const pi = event.data.object as {
           id: string;
           status: string;
           metadata?: Record<string, string>;
         };
         const md = pi.metadata ?? {};
+        if (md.clerk_booking_id) {
+          // A Gideon Clerk hold: finish the booking, or release a stray hold.
+          await handleClerkHoldAuthorizedEvent(pi);
+          break;
+        }
         if (
           pi.status !== "requires_capture" ||
           !isUuid(md.task_id) ||
