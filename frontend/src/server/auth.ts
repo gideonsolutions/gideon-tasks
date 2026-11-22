@@ -14,6 +14,8 @@ export interface Claims {
   sub: string;
   is_admin: boolean;
   trust_level: number;
+  /** The session passed two-step sign-in (src/server/two-step/). */
+  mfa?: boolean;
   exp: number;
   iat: number;
 }
@@ -22,9 +24,10 @@ export async function createAccessToken(
   userId: string,
   isAdmin: boolean,
   trustLevel: number,
+  mfa = false,
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  return new SignJWT({ is_admin: isAdmin, trust_level: trustLevel })
+  return new SignJWT({ is_admin: isAdmin, trust_level: trustLevel, mfa })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(userId)
     .setIssuedAt(now)
@@ -35,6 +38,8 @@ export async function createAccessToken(
 export async function decodeAccessToken(token: string): Promise<Claims> {
   try {
     const { payload } = await jwtVerify(token, key());
+    // No other kind of token is ever an access token.
+    if ("purpose" in payload) throw new Error("not an access token");
     return payload as unknown as Claims;
   } catch (e) {
     throw unauthorized(`Invalid token: ${(e as Error).message}`);
@@ -45,6 +50,8 @@ export interface AuthUser {
   userId: string;
   isAdmin: boolean;
   trustLevel: number;
+  /** The session passed two-step sign-in. */
+  mfa?: boolean;
 }
 
 export async function requireAuth(req: Request): Promise<AuthUser> {
@@ -58,6 +65,7 @@ export async function requireAuth(req: Request): Promise<AuthUser> {
     userId: claims.sub,
     isAdmin: claims.is_admin,
     trustLevel: claims.trust_level,
+    mfa: claims.mfa === true,
   };
 }
 

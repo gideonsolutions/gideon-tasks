@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { handle, badRequest, conflict, forbidden } from "@/server/errors";
 import { queryOne } from "@/server/db";
-import { requireAuth, newId } from "@/server/auth";
+import { newId } from "@/server/auth";
+import { requireDocumentUser } from "@/server/documents/access";
 import { ok, parseBody, uuidSchema } from "@/server/route-helpers";
 import { issueUploadToken, requireDocumentsEnabled } from "@/server/documents/storage";
 import {
@@ -32,7 +33,7 @@ async function taskId(params: Promise<{ id: string }>): Promise<string> {
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   return handle(async () => {
     requireDocumentsEnabled();
-    const auth = await requireAuth(req);
+    const auth = await requireDocumentUser(req);
     const task = await loadDocumentTask(await taskId(params));
     const listed = await listTaskDocuments(task, auth);
     return ok({
@@ -57,7 +58,7 @@ const StartSchema = z.object({
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   return handle(async () => {
     requireDocumentsEnabled();
-    const auth = await requireAuth(req);
+    const auth = await requireDocumentUser(req);
     const task = await loadDocumentTask(await taskId(params));
     requireTaskDocumentAccess(task, auth);
     if (!canUploadTaskDocuments(task, { userId: auth.userId, isAdmin: auth.isAdmin })) {

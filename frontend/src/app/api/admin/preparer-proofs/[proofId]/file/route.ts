@@ -1,5 +1,5 @@
 import { handle, badRequest, notFound } from "@/server/errors";
-import { requireAdmin } from "@/server/auth";
+import { requireDocumentAdmin } from "@/server/documents/access";
 import { logAudit } from "@/server/audit";
 import { uuidSchema } from "@/server/route-helpers";
 import { blobStream, downloadResponse, requireDocumentsEnabled } from "@/server/documents/storage";
@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export async function GET(req: Request, { params }: { params: Promise<{ proofId: string }> }) {
   return handle(async () => {
     requireDocumentsEnabled();
-    const admin = await requireAdmin(req);
+    const admin = await requireDocumentAdmin(req);
     const { proofId } = await params;
     if (!uuidSchema.safeParse(proofId).success) throw badRequest("Not a document ID");
     const proof = await loadProof(proofId);

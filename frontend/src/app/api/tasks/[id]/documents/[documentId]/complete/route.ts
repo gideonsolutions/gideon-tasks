@@ -1,6 +1,6 @@
 import { handle, badRequest, conflict, contentRejected, forbidden } from "@/server/errors";
 import { queryOne } from "@/server/db";
-import { requireAuth } from "@/server/auth";
+import { requireDocumentUser } from "@/server/documents/access";
 import { logAudit } from "@/server/audit";
 import { ok, uuidSchema } from "@/server/route-helpers";
 import { requireDocumentsEnabled } from "@/server/documents/storage";
@@ -26,7 +26,7 @@ export async function POST(
 ) {
   return handle(async () => {
     requireDocumentsEnabled();
-    const auth = await requireAuth(req);
+    const auth = await requireDocumentUser(req);
     const { id, documentId } = await params;
     if (!uuidSchema.safeParse(id).success || !uuidSchema.safeParse(documentId).success) {
       throw badRequest("Not a file ID");

@@ -61,14 +61,16 @@ class ApiClient {
 
     if (!response.ok) {
       let message = "An unexpected error occurred";
+      let code: string | undefined;
       try {
         const data = await response.json();
         message = data.error ?? message;
+        code = data.code;
       } catch {
         // Response wasn't JSON
       }
 
-      const error: ApiError = { error: message, status: response.status };
+      const error: ApiError = { error: message, status: response.status, ...(code && { code }) };
 
       // Auto-redirect to login on 401
       if (response.status === 401) {
@@ -116,13 +118,16 @@ class ApiClient {
     });
     if (!response.ok) {
       let message = "Could not open the file";
+      let code: string | undefined;
       try {
-        message = (await response.json()).error ?? message;
+        const data = await response.json();
+        message = data.error ?? message;
+        code = data.code;
       } catch {
         // Not JSON
       }
       if (response.status === 401) useAuthStore.getState().logout();
-      throw { error: message, status: response.status } as ApiError;
+      throw { error: message, status: response.status, ...(code && { code }) } as ApiError;
     }
     return response.blob();
   }

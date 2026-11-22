@@ -365,6 +365,34 @@ CREATE TABLE IF NOT EXISTS preparer_proofs (
 CREATE INDEX IF NOT EXISTS idx_preparer_proofs_user_id ON preparer_proofs(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_preparer_proofs_status ON preparer_proofs(status, created_at);
 
+-- Two-step sign-in (src/server/two-step/). The authenticator secret is
+-- encrypted with AES-256-GCM under MFA_ENCRYPTION_KEY, which is only in the
+-- environment; it is set while the user sets it up and takes effect only
+-- when totp_enabled_at is set, after a code from it is confirmed.
+-- totp_last_step is the last code's time step, so a code can't be used
+-- twice. Every fifth wrong code in a row locks the second step
+-- (totp_locked_until) for longer: 15 minutes, doubling, up to a day.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret_enc TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_failures INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_locked_until TIMESTAMPTZ;
+
+-- Whether the session a refresh token belongs to passed two-step sign-in. A
+-- refresh keeps it and can never add it. Existing tokens are false.
+ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS mfa_verified BOOLEAN NOT NULL DEFAULT false;
+
+-- Ten single-use recovery codes per account, stored only as SHA-256 hashes.
+CREATE TABLE IF NOT EXISTS mfa_recovery_codes (
+    id          UUID PRIMARY KEY,
+    user_id     UUID NOT NULL REFERENCES users(id),
+    code_hash   TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    used_at     TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_user_id ON mfa_recovery_codes(user_id, code_hash);
+
 -- Revoke UPDATE and DELETE on audit_log via a trigger (defense in depth)
 CREATE OR REPLACE FUNCTION prevent_audit_log_mutation() RETURNS TRIGGER AS $$
 BEGIN

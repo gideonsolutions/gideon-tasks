@@ -15,6 +15,7 @@ import * as adminApi from "@/lib/api/admin";
 import * as documentsApi from "@/lib/api/documents";
 import { formatBytes, openFile } from "@/lib/documents/upload";
 import { PROOF_KIND_LABELS } from "@/server/documents/rules";
+import { TwoStepRequiredNotice } from "@/components/two-step/two-step-required";
 import type { ApiError, ProofQueueItem, TaxCredential } from "@/lib/types";
 
 const checkbox = "mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500";
@@ -38,6 +39,9 @@ export function ProofReviewQueue() {
         Document storage isn&apos;t set up, so there is nothing to review.
       </p>
     );
+  }
+  if (error?.code === "two_step_required") {
+    return <TwoStepRequiredNotice message={`The review queue: ${error.error}.`} />;
   }
   if (loading || !data) {
     return error ? (

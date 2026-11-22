@@ -17,7 +17,9 @@ const ADMIN = "0190d0c0-0000-7000-8000-00000000a005";
 
 const state = vi.hoisted(() => ({
   enabled: true,
-  actor: { userId: "", isAdmin: false },
+  actor: { userId: "", isAdmin: false, mfa: true },
+  /** The actor's account has two-step sign-in on. */
+  twoStepOn: true,
   task: {} as Record<string, unknown>,
   doc: null as Record<string, unknown> | null,
   insertAllowed: true,
@@ -33,6 +35,9 @@ const db = vi.hoisted(() => ({
     throw new Error(`Unexpected query: ${sql}`);
   }),
   queryOne: vi.fn(async (sql: string, params: unknown[] = []) => {
+    if (sql.includes("SELECT totp_enabled_at FROM users WHERE id = $1")) {
+      return { totp_enabled_at: state.twoStepOn ? "2026-11-01T00:00:00Z" : null };
+    }
     if (sql.includes("FROM tasks t LEFT JOIN categories c")) return state.task;
     if (sql.includes("FROM task_documents WHERE id = $1 AND task_id = $2")) return state.doc;
     if (sql.includes("INSERT INTO task_documents")) return state.insertAllowed ? { id: params[0] } : null;
@@ -87,12 +92,13 @@ const taskParams = { params: Promise.resolve({ id: TASK }) };
 const docParams = { params: Promise.resolve({ id: TASK, documentId: DOC }) };
 const pdf = { file_name: "W-2 2025.pdf", content_type: "application/pdf", size_bytes: 1234 };
 
+// Everyone here has signed in with two-step sign-in, unless a test says not.
 const roles = {
-  requester: { userId: REQUESTER, isAdmin: false },
-  assignedTasker: { userId: DOER, isAdmin: false },
-  otherApplicant: { userId: OTHER_APPLICANT, isAdmin: false },
-  stranger: { userId: STRANGER, isAdmin: false },
-  admin: { userId: ADMIN, isAdmin: true },
+  requester: { userId: REQUESTER, isAdmin: false, mfa: true },
+  assignedTasker: { userId: DOER, isAdmin: false, mfa: true },
+  otherApplicant: { userId: OTHER_APPLICANT, isAdmin: false, mfa: true },
+  stranger: { userId: STRANGER, isAdmin: false, mfa: true },
+  admin: { userId: ADMIN, isAdmin: true, mfa: true },
 };
 
 const uploadedByRequester = {
@@ -114,6 +120,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.enabled = true;
   state.actor = roles.requester;
+  state.twoStepOn = true;
   state.task = {
     id: TASK,
     requester_id: REQUESTER,
@@ -310,5 +317,44 @@ describe("finishing an upload", () => {
       task_id: TASK,
       reason: "invalid",
     });
+  });
+});
+
+describe("two-step sign-in is required on every route", () => {
+  const routes = () => [
+    ["list", () => list(req("GET"), taskParams)],
+    ["start an upload", () => start(req("POST", pdf), taskParams)],
+    ["finish an upload", () => complete(req("POST"), docParams)],
+    ["download", () => download(req("GET"), docParams)],
+    ["delete", () => remove(req("DELETE"), docParams)],
+  ] as const;
+
+  it.each([
+    ["the account doesn't have it", { twoStepOn: false, mfa: true }, /Set up two-step sign-in first/],
+    ["the session didn't pass it", { twoStepOn: true, mfa: false }, /sign in again with your two-step code/],
+  ])("refuses the requester when %s", async (_label, { twoStepOn, mfa }, message) => {
+    state.twoStepOn = twoStepOn;
+    state.actor = { ...roles.requester, mfa };
+    for (const [, call] of routes()) {
+      const res = await call();
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body).toMatchObject({ code: "two_step_required", setup_url: "/profile/security" });
+      expect(body.error).toMatch(message);
+    }
+    expect(storage.issueUploadToken).not.toHaveBeenCalled();
+    expect(storage.blobStream).not.toHaveBeenCalled();
+    expect(storage.deleteBlob).not.toHaveBeenCalled();
+    // Refused before the task or file is even looked up.
+    expect(
+      (db.queryOne.mock.calls as unknown as [string][]).some(([sql]) => sql.includes("FROM tasks t")),
+    ).toBe(false);
+  });
+
+  it("refuses an admin without it, even during a dispute", async () => {
+    state.task = { ...state.task, status: "disputed" };
+    state.actor = { ...roles.admin, mfa: false };
+    expect((await list(req("GET"), taskParams)).status).toBe(403);
+    expect((await download(req("GET"), docParams)).status).toBe(403);
   });
 });

@@ -1,6 +1,6 @@
 import { handle, badRequest, conflict, contentRejected, notFound } from "@/server/errors";
 import { queryOne } from "@/server/db";
-import { requireAuth } from "@/server/auth";
+import { requireDocumentUser } from "@/server/documents/access";
 import { logAudit } from "@/server/audit";
 import { ok, uuidSchema } from "@/server/route-helpers";
 import { requireDocumentsEnabled } from "@/server/documents/storage";
@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 export async function POST(req: Request, { params }: { params: Promise<{ proofId: string }> }) {
   return handle(async () => {
     requireDocumentsEnabled();
-    const auth = await requireAuth(req);
+    const auth = await requireDocumentUser(req);
     const { proofId } = await params;
     if (!uuidSchema.safeParse(proofId).success) throw badRequest("Not a document ID");
     const proof = await loadProof(proofId);

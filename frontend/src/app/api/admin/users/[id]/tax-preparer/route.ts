@@ -2,6 +2,7 @@ import { z } from "zod";
 import { handle, notFound, badRequest, conflict } from "@/server/errors";
 import { queryOne } from "@/server/db";
 import { requireAdmin } from "@/server/auth";
+import { requireTwoStep } from "@/server/two-step/service";
 import { logAudit } from "@/server/audit";
 import { ok, parseBody, uuidSchema } from "@/server/route-helpers";
 import {
@@ -147,10 +148,13 @@ export async function POST(
     const before = await queryOne<Row>(`SELECT ${COLUMNS} FROM users WHERE id = $1`, [id]);
     if (!before) throw notFound("User not found");
 
-    const proof =
-      (body.action === "record_ptin" || body.action === "record_credential") && body.proof_id
-        ? await pendingProofFor(id, body.proof_id, body.action === "record_ptin" ? "ptin" : body.credential)
-        : null;
+    const fromProof = (body.action === "record_ptin" || body.action === "record_credential") && body.proof_id;
+    // Approving from the review queue means the admin opened the document:
+    // that needs two-step sign-in, like every other document route.
+    if (fromProof) await requireTwoStep(admin);
+    const proof = fromProof
+      ? await pendingProofFor(id, body.proof_id!, body.action === "record_ptin" ? "ptin" : body.credential)
+      : null;
 
     let after: Row | null;
     switch (body.action) {

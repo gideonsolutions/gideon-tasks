@@ -1,6 +1,6 @@
 import { handle, badRequest, forbidden, notFound } from "@/server/errors";
 import { queryOne } from "@/server/db";
-import { requireAuth } from "@/server/auth";
+import { requireDocumentUser } from "@/server/documents/access";
 import { logAudit } from "@/server/audit";
 import { ok, uuidSchema } from "@/server/route-helpers";
 import {
@@ -36,7 +36,7 @@ export async function GET(
 ) {
   return handle(async () => {
     requireDocumentsEnabled();
-    const auth = await requireAuth(req);
+    const auth = await requireDocumentUser(req);
     const { id, documentId } = await ids(params);
     const task = await loadDocumentTask(id);
     const access = requireTaskDocumentAccess(task, auth);
@@ -60,7 +60,7 @@ export async function DELETE(
 ) {
   return handle(async () => {
     requireDocumentsEnabled();
-    const auth = await requireAuth(req);
+    const auth = await requireDocumentUser(req);
     const { id, documentId } = await ids(params);
     const task = await loadDocumentTask(id);
     if (requireTaskDocumentAccess(task, auth) !== "participant") {

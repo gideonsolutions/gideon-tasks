@@ -10,6 +10,7 @@ import { formatDate, formatDateTime } from "@/lib/utils/format";
 import * as documentsApi from "@/lib/api/documents";
 import { formatBytes, saveFile, uploadDocument } from "@/lib/documents/upload";
 import { DOCUMENT_CATEGORY_SLUGS } from "@/server/documents/rules";
+import { TwoStepRequiredNotice } from "@/components/two-step/two-step-required";
 import type { ApiError, Task } from "@/lib/types";
 
 const VISIBLE_STATUSES = ["assigned", "in_progress", "submitted", "disputed", "completed", "cancelled", "resolved"];
@@ -110,6 +111,9 @@ function TaskDocumentsCard({
     }
   }
 
+  if (error?.code === "two_step_required") {
+    return <TwoStepRequiredNotice message={`This task's documents: ${error.error}.`} />;
+  }
   if (error) return null;
 
   return (

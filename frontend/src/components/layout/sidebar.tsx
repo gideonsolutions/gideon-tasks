@@ -12,6 +12,7 @@ const navItems = [
   { href: "/profile/payment", label: "Payment Card" },
   { href: "/profile/stripe", label: "Stripe Connect" },
   { href: "/profile/preparer", label: "Tax Preparer" },
+  { href: "/profile/security", label: "Two-Step Sign-In" },
   { href: "/invites", label: "Invites" },
   { href: "/attestations", label: "Attestations" },
 ];

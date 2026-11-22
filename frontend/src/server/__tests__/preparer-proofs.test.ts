@@ -49,7 +49,8 @@ const userRow = {
 };
 
 const state = vi.hoisted(() => ({
-  actor: { userId: "", isAdmin: false },
+  actor: { userId: "", isAdmin: false, mfa: true },
+  twoStepOn: true,
   proof: null as Record<string, unknown> | null,
   openCount: 0,
 }));
@@ -67,6 +68,9 @@ const db = vi.hoisted(() => ({
     throw new Error(`Unexpected query: ${sql}`);
   }),
   queryOne: vi.fn(async (sql: string, params: unknown[] = []) => {
+    if (sql.includes("SELECT totp_enabled_at FROM users WHERE id = $1")) {
+      return { totp_enabled_at: state.twoStepOn ? "2026-11-01T00:00:00Z" : null };
+    }
     if (sql.includes("INSERT INTO preparer_proofs")) return state.openCount < 5 ? { id: params[0] } : null;
     if (sql.includes("FROM preparer_proofs WHERE id = $1")) return state.proof;
     if (sql.startsWith("UPDATE preparer_proofs SET status = 'pending'")) {
@@ -148,7 +152,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-11-21T15:00:00Z"));
-  state.actor = { userId: TASKER, isAdmin: false };
+  state.actor = { userId: TASKER, isAdmin: false, mfa: true };
+  state.twoStepOn = true;
   state.proof = proofRow();
   state.openCount = 0;
 });
@@ -196,7 +201,7 @@ describe("the tasker's own proof documents", () => {
   });
 
   it("hides another user's proof as not found", async () => {
-    state.actor = { userId: OTHER, isAdmin: false };
+    state.actor = { userId: OTHER, isAdmin: false, mfa: true };
     expect((await downloadMine(req("GET"), proofParams)).status).toBe(404);
     expect((await withdrawMine(req("DELETE"), proofParams)).status).toBe(404);
     expect((await completeMine(req("POST"), proofParams)).status).toBe(404);
@@ -229,7 +234,7 @@ describe("the admin review queue", () => {
   });
 
   it("lists pending documents with who sent them", async () => {
-    state.actor = { userId: ADMIN, isAdmin: true };
+    state.actor = { userId: ADMIN, isAdmin: true, mfa: true };
     const body = await (await queue(req("GET"))).json();
     expect(body.recordable_years).toEqual([2026]);
     expect(body.proofs).toHaveLength(1);
@@ -238,7 +243,7 @@ describe("the admin review queue", () => {
   });
 
   it("audits every time an admin opens a document", async () => {
-    state.actor = { userId: ADMIN, isAdmin: true };
+    state.actor = { userId: ADMIN, isAdmin: true, mfa: true };
     expect((await adminOpen(req("GET"), proofParams)).status).toBe(200);
     expect(audit.logAudit).toHaveBeenCalledWith(ADMIN, "preparer_proof.downloaded", "preparer_proof", PROOF, null, {
       access: "admin",
@@ -247,13 +252,13 @@ describe("the admin review queue", () => {
   });
 
   it("can't open a document whose file was deleted", async () => {
-    state.actor = { userId: ADMIN, isAdmin: true };
+    state.actor = { userId: ADMIN, isAdmin: true, mfa: true };
     state.proof = proofRow({ status: "approved", file_deleted_at: "2027-02-19T16:00:00Z" });
     expect((await adminOpen(req("GET"), proofParams)).status).toBe(404);
   });
 
   it("rejects with a note, once", async () => {
-    state.actor = { userId: ADMIN, isAdmin: true };
+    state.actor = { userId: ADMIN, isAdmin: true, mfa: true };
     expect((await adminReject(req("POST", { note: " " }), proofParams)).status).toBe(400);
     const res = await adminReject(req("POST", { note: "Send the 2026 confirmation" }), proofParams);
     expect(res.status).toBe(200);
@@ -263,7 +268,7 @@ describe("the admin review queue", () => {
 
   describe("approving with the existing record action", () => {
     beforeEach(() => {
-      state.actor = { userId: ADMIN, isAdmin: true };
+      state.actor = { userId: ADMIN, isAdmin: true, mfa: true };
     });
 
     const recordPtin = {
@@ -320,5 +325,74 @@ describe("the admin review queue", () => {
       expect((await recordPreparer(req("POST", noProof), userParams)).status).toBe(200);
       expect(actions()).toEqual(["admin.user.ptin_recorded"]);
     });
+  });
+});
+
+describe("two-step sign-in is required on every proof and review route", () => {
+  const taskerRoutes = () => [
+    () => listMine(req("GET")),
+    () => startMine(req("POST", { kind: "ptin", file_name: "a.pdf", content_type: "application/pdf", size_bytes: 10 })),
+    () => completeMine(req("POST"), proofParams),
+    () => downloadMine(req("GET"), proofParams),
+    () => withdrawMine(req("DELETE"), proofParams),
+  ];
+  const adminRoutes = () => [
+    () => queue(req("GET")),
+    () => adminOpen(req("GET"), proofParams),
+    () => adminReject(req("POST", { note: "x" }), proofParams),
+    () =>
+      recordPreparer(
+        req("POST", {
+          action: "record_ptin",
+          ptin: "P01234567",
+          year: 2026,
+          note: "x",
+          confirms_current_ptin: true,
+          proof_id: PROOF,
+        }),
+        userParams,
+      ),
+  ];
+
+  it.each([
+    ["the account doesn't have it", false, true],
+    ["the session didn't pass it", true, false],
+  ])("refuses a tasker when %s", async (_label, twoStepOn, mfa) => {
+    state.twoStepOn = twoStepOn;
+    state.actor = { userId: TASKER, isAdmin: false, mfa };
+    for (const call of taskerRoutes()) {
+      const res = await call();
+      expect(res.status).toBe(403);
+      expect((await res.json()).code).toBe("two_step_required");
+    }
+    expect(storage.issueUploadToken).not.toHaveBeenCalled();
+    expect(storage.blobStream).not.toHaveBeenCalled();
+    expect(storage.deleteBlob).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the account doesn't have it", false, true],
+    ["the session didn't pass it", true, false],
+  ])("refuses an admin when %s, including approving from a proof", async (_label, twoStepOn, mfa) => {
+    state.twoStepOn = twoStepOn;
+    state.actor = { userId: ADMIN, isAdmin: true, mfa };
+    for (const call of adminRoutes()) {
+      const res = await call();
+      expect(res.status).toBe(403);
+      expect((await res.json()).code).toBe("two_step_required");
+    }
+    expect(storage.blobStream).not.toHaveBeenCalled();
+    expect(audit.logAudit).not.toHaveBeenCalled();
+    expect(state.proof?.status).toBe("pending");
+  });
+
+  it("still lets an admin record a PTIN without a proof, as before", async () => {
+    state.twoStepOn = false;
+    state.actor = { userId: ADMIN, isAdmin: true, mfa: false };
+    const res = await recordPreparer(
+      req("POST", { action: "record_ptin", ptin: "P01234567", year: 2026, note: "x", confirms_current_ptin: true }),
+      userParams,
+    );
+    expect(res.status).toBe(200);
   });
 });

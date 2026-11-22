@@ -15,6 +15,7 @@ import { TAX_CREDENTIAL_LABELS } from "@/lib/constants";
 import * as documentsApi from "@/lib/api/documents";
 import { formatBytes, saveFile, uploadDocument } from "@/lib/documents/upload";
 import { PROOF_KINDS, PROOF_KIND_LABELS } from "@/server/documents/rules";
+import { TwoStepRequiredNotice } from "@/components/two-step/two-step-required";
 import type { ApiError, PreparerProof, ProofKind, ProofStatus } from "@/lib/types";
 
 const STATUS_LABELS: Record<ProofStatus, string> = {
@@ -68,7 +69,7 @@ export function PreparerProofs() {
 function ProofsCard({ maxBytes, accept, retentionDays }: { maxBytes: number; accept: string; retentionDays: number }) {
   const { addToast } = useToast();
   const { user, fetchUser } = useAuth();
-  const { data: proofs, loading, refetch } = useApi(() => documentsApi.listMyProofs(), []);
+  const { data: proofs, loading, error, refetch } = useApi(() => documentsApi.listMyProofs(), []);
   const [kind, setKind] = useState<ProofKind>("ptin");
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -113,6 +114,10 @@ function ProofsCard({ maxBytes, accept, retentionDays }: { maxBytes: number; acc
       setBusy(null);
       void fetchUser();
     }
+  }
+
+  if (error?.code === "two_step_required") {
+    return <TwoStepRequiredNotice message={`To send proof of your PTIN or credential: ${error.error}.`} />;
   }
 
   return (

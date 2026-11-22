@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { handle, badRequest, conflict } from "@/server/errors";
 import { query, queryOne } from "@/server/db";
-import { requireAuth, newId } from "@/server/auth";
+import { newId } from "@/server/auth";
+import { requireDocumentUser } from "@/server/documents/access";
 import { ok, parseBody } from "@/server/route-helpers";
 import { issueUploadToken, requireDocumentsEnabled } from "@/server/documents/storage";
 import {
@@ -18,7 +19,7 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   return handle(async () => {
     requireDocumentsEnabled();
-    const auth = await requireAuth(req);
+    const auth = await requireDocumentUser(req);
     const rows = await query<ProofRow>(
       `SELECT ${PROOF_COLUMNS} FROM preparer_proofs
        WHERE user_id = $1 AND status NOT IN ('uploading', 'abandoned')
@@ -43,7 +44,7 @@ const StartSchema = z.object({
 export async function POST(req: Request) {
   return handle(async () => {
     requireDocumentsEnabled();
-    const auth = await requireAuth(req);
+    const auth = await requireDocumentUser(req);
     const body = await parseBody(req, StartSchema);
     const check = checkFileMeta(body);
     if (!check.ok) throw badRequest(check.error);

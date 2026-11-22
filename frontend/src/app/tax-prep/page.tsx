@@ -219,6 +219,15 @@ export default function TaxPrepPage() {
                 deletion, but never what a file contains.
               </li>
               <li>
+                <strong className="text-gray-900">Two-step sign-in.</strong>{" "}
+                To share documents, you and the preparer each turn on{" "}
+                <Link href="/profile/security" className={link}>
+                  two-step sign-in
+                </Link>
+                : after your password, a code from an authenticator app on your
+                phone. Admins need it too.
+              </li>
+              <li>
                 <strong className="text-gray-900">When they are deleted.</strong>{" "}
                 Every file on a task is deleted automatically{" "}
                 {TASK_DOCUMENT_RETENTION_DAYS} days after the task is
@@ -302,7 +311,11 @@ export default function TaxPrepPage() {
             <Step title="Have it recorded.">
               {documents ? (
                 <>
-                  Sign in and send proof of your PTIN on the{" "}
+                  Turn on{" "}
+                  <Link href="/profile/security" className={link}>
+                    two-step sign-in
+                  </Link>
+                  , then send proof of your PTIN on the{" "}
                   <Link href="/profile/preparer" className={link}>
                     Tax Preparer page
                   </Link>

@@ -1,6 +1,6 @@
 import { handle } from "@/server/errors";
 import { query } from "@/server/db";
-import { requireAdmin } from "@/server/auth";
+import { requireDocumentAdmin } from "@/server/documents/access";
 import { ok } from "@/server/route-helpers";
 import { requireDocumentsEnabled } from "@/server/documents/storage";
 import { proofColumns, proofView, type ProofRow } from "@/server/documents/proofs";
@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   return handle(async () => {
     requireDocumentsEnabled();
-    await requireAdmin(req);
+    await requireDocumentAdmin(req);
     const rows = await query<
       ProofRow & {
         legal_first_name: string;
