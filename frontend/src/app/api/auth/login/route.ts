@@ -11,6 +11,7 @@ import {
 import { logAudit } from "@/server/audit";
 import { env } from "@/server/env";
 import { ok, parseBody } from "@/server/route-helpers";
+import { userSelfView } from "@/server/user-self-view";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,10 @@ interface UserRow {
   background_check_cleared_at: string | null;
   /** For admins only: never sent to the user. */
   background_check_note: string | null;
+  /** For admins only: the user gets has_ptin instead (see userSelfView). */
+  ptin: string | null;
+  ptin_year: number | null;
+  tax_credential: string | null;
   is_admin: boolean;
   created_at: string;
   updated_at: string;
@@ -74,17 +79,11 @@ export async function POST(req: Request) {
 
     await logAudit(user.id, "user.login", "user", user.id, null, null);
 
-    const {
-      password_hash: _omit,
-      background_check_note: _note,
-      ...publicUser
-    } = user;
-    void _omit;
-    void _note;
     return ok({
       access_token: accessToken,
       refresh_token: refreshToken,
-      user: publicUser,
+      // Without the password hash and the columns only admins see.
+      user: userSelfView({ ...user }),
     });
   });
 }

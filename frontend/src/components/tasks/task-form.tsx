@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FeeBreakdownDisplay } from "./fee-breakdown";
 import { GuardianRules } from "./guardian-rules";
+import { TaxPrepNotice } from "@/components/tax-prep/tax-prep-notice";
 import { useToast } from "@/components/ui/toast";
 import {
   GUARDIAN_TICK_LABEL,
@@ -79,8 +80,8 @@ export function TaskForm({
   }, [initialCategorySlug]);
 
   const priceCents = Math.round(parseFloat(form.price_dollars || "0") * 100);
-  const isTutoring =
-    categories.find((c) => c.id === form.category_id)?.slug === TUTORING_SLUG;
+  const selectedSlug = categories.find((c) => c.id === form.category_id)?.slug;
+  const isTutoring = selectedSlug === TUTORING_SLUG;
   // The guardian's tick only counts in Tutoring (the API enforces this too).
   const forMinor = isTutoring && form.for_minor;
   const minorInPerson = forMinor && form.location_type === "in_person";
@@ -196,6 +197,7 @@ export function TaskForm({
         </label>
       )}
       {forMinor && <GuardianRules inForm />}
+      <TaxPrepNotice categorySlug={selectedSlug} inForm />
       <Select
         id="pricing_mode"
         label="How do you want to set the price?"

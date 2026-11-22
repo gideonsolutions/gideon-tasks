@@ -6,6 +6,7 @@ import { authorizeEscrowPayment } from "@/server/payments";
 import { finalizeAssignment } from "@/server/assignment";
 import { ok } from "@/server/route-helpers";
 import { requireBackgroundCheck } from "@/server/minor-safeguards";
+import { requireTaxQualification } from "@/server/tax-prep-gate";
 
 export const runtime = "nodejs";
 
@@ -34,9 +35,12 @@ export async function POST(
       pricing_mode: "doer_receives" | "requester_pays";
       assigned_doer_id: string | null;
       for_minor: boolean;
+      category_slug: string | null;
     }>(
-      `SELECT requester_id, status, price_cents, pricing_mode, assigned_doer_id, for_minor
-       FROM tasks WHERE id = $1`,
+      `SELECT t.requester_id, t.status, t.price_cents, t.pricing_mode, t.assigned_doer_id,
+              t.for_minor, c.slug AS category_slug
+       FROM tasks t LEFT JOIN categories c ON c.id = t.category_id
+       WHERE t.id = $1`,
       [id],
     );
     if (!task) throw notFound("Task not found");
@@ -65,6 +69,9 @@ export async function POST(
     // Checked again here, before the card is authorized: the tutor's check
     // may have been cleared since they applied.
     if (task.for_minor) await requireBackgroundCheck(app.doer_id);
+    // Likewise a preparer's PTIN: it may have been cleared, or the year may
+    // have ended, since they applied.
+    await requireTaxQualification(app.doer_id, task.category_slug);
 
     const result = await authorizeEscrowPayment({
       taskId: id,

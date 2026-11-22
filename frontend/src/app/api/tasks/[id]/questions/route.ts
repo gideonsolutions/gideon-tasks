@@ -11,6 +11,7 @@ import { moderateContent } from "@/server/moderation";
 import { logAudit } from "@/server/audit";
 import { ok, parseBody } from "@/server/route-helpers";
 import { requireBackgroundCheck } from "@/server/minor-safeguards";
+import { requireTaxQualification } from "@/server/tax-prep-gate";
 
 export const runtime = "nodejs";
 
@@ -62,6 +63,8 @@ export async function POST(
 
     // Only tutors who could be booked may ask about tutoring for a child.
     if (task.for_minor) await requireBackgroundCheck(auth.userId);
+    // Only preparers who could be booked may ask about a Tax Prep task.
+    await requireTaxQualification(auth.userId, task.category_slug);
 
     const moderation = moderateContent(body.question_body, {
       categorySlug: task.category_slug,

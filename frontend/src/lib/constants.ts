@@ -100,3 +100,18 @@ export { TUTORING_SLUG } from "@/server/moderation";
 /** The guardian's tick on a Tutoring task (tasks.for_minor). */
 export const GUARDIAN_TICK_LABEL =
   "This is for my child under 18; I'm their parent or legal guardian";
+
+/** Tax preparers: the Tax Prep slug, credentials and the PTIN rule. */
+export {
+  TAX_PREP_SLUG,
+  IRS_HELP_SLUG,
+  TAX_CREDENTIALS,
+  TAX_CREDENTIAL_LABELS,
+  taxRequirement,
+  meetsTaxRequirement,
+  preparerBadgeLabels,
+  utcYear,
+} from "@/server/tax-preparers";
+
+/** The IRS Directory of Federal Tax Return Preparers with Credentials and Select Qualifications. */
+export const IRS_PREPARER_DIRECTORY_URL = "https://irs.treasury.gov/rpo/rpo.jsf";

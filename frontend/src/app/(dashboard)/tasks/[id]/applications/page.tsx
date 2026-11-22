@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { PreparerBadges } from "@/components/users/preparer-badges";
 import { formatCents, formatRelative } from "@/lib/utils/format";
 import { calculateFees } from "@/lib/utils/fees";
 import { GIDEON_FEE_BPS } from "@/lib/constants";
@@ -141,9 +142,15 @@ export default function TaskApplicationsPage({
           <Card key={app.id}>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">
-                  Applicant: {app.doer_id.slice(0, 8)}...
-                </CardTitle>
+                <div className="space-y-1">
+                  <CardTitle className="text-base">
+                    Applicant:{" "}
+                    <Link href={`/users/${app.doer_id}`} className="text-blue-600 hover:underline">
+                      {app.doer_id.slice(0, 8)}...
+                    </Link>
+                  </CardTitle>
+                  <PreparerBadges badges={app.doer_badges} />
+                </div>
                 <span className="text-xs text-gray-500">
                   {formatRelative(app.created_at)}
                 </span>

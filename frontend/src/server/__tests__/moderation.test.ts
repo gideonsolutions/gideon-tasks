@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  containsSsnOrItin,
   isGuardianTutoring,
   moderateContent,
+  SSN_REJECTION_REASON,
   stripContactInfo,
 } from "../moderation";
 
@@ -188,6 +190,89 @@ describe("moderateContent — a child without the guardian's tick", () => {
       moderateContent(
         "Looking for a calculus tutor, two online sessions before my exam",
         { categorySlug: "tutoring", forMinor: false },
+      ).kind,
+    ).toBe("clean");
+  });
+});
+
+// ─── Social Security numbers and ITINs ───────────────────
+
+describe("moderateContent — Social Security numbers and ITINs", () => {
+  it.each([
+    "My SSN is 123-45-6789, please file for me",
+    "Spouse: 123–45–6789", // en dashes
+    "ITIN 912-70-1234 for my 2025 return",
+    "SSN: 123456789",
+    "ssn 123 45 6789",
+    "my ss# 123.45.6789",
+    "Social Security number is 123 45 6789",
+    "social security #: 123456789",
+    "My ITIN: 912701234",
+    "TIN 123456789",
+    "Taxpayer identification number 123456789",
+    "123456789 is my SSN",
+    "Use 912 70 1234 (my ITIN)",
+    "SSN\n123-45-6789",
+  ])("rejects: %s", (text) => {
+    expect(containsSsnOrItin(text)).toBe(true);
+    expect(moderateContent(text)).toEqual({ kind: "rejected", reason: SSN_REJECTION_REASON });
+  });
+
+  it("rejects one on every kind of task, including a guardian's tutoring task", () => {
+    for (const context of [
+      undefined,
+      { categorySlug: "tax-prep", forMinor: false },
+      { categorySlug: "tutoring", forMinor: true },
+    ]) {
+      expect(moderateContent("Her SSN is 123-45-6789", context).kind).toBe("rejected");
+    }
+  });
+
+  it.each([
+    // Prices
+    "I'll pay $150 for a 1040 with Schedule C, or $1,234.56 for both years",
+    "Budget is $123,456,789 total", // a nine-digit price with commas
+    // Dates
+    "Deadline 2026-04-15, tax years 2023-2025",
+    "Due 04-15-2026 or 4/15/2026",
+    "Tax years 2023, 2024 and 2025",
+    // ZIP codes
+    "Meet at the library in ZIP 28202",
+    "The library is in 28202-1234",
+    // Forms, counts and states
+    "Three W-2s, two 1099-NEC forms and a 1098-T for NC and SC returns",
+    "Form 941 for Q1-Q4 2026, Form 940 too",
+    // An EIN, and an unlabeled nine-digit number
+    "Business EIN 12-3456789 on Form 1120-S",
+    "Order 123456789 from the office supply store",
+    // "tin" as a word
+    "Fix the tin roof, about 123456789 square inches",
+    // An itinerary is not an ITIN
+    "Itinerary 123456789 for the trip",
+  ])("does not treat as an SSN or ITIN: %s", (text) => {
+    expect(containsSsnOrItin(text)).toBe(false);
+    const r = moderateContent(text);
+    expect(r.kind === "rejected" && r.reason).not.toBe(SSN_REJECTION_REASON);
+  });
+
+  it.each([
+    "Call me at 555-123-4567",
+    "My number is 555 123 4567",
+    "Text me at +1-555-123-4567",
+    "Phone 1-800-555-0199",
+  ])("leaves phone numbers to the contact-details rule: %s", (text) => {
+    expect(containsSsnOrItin(text)).toBe(false);
+    expect(moderateContent(text)).toEqual({
+      kind: "rejected",
+      reason: "Contact information not allowed in task descriptions",
+    });
+  });
+
+  it("allows a tax prep post that has no number in it", () => {
+    expect(
+      moderateContent(
+        "Need a 2025 federal and NC return prepared: one W-2, a 1099-INT, and the standard deduction. In person at the library.",
+        { categorySlug: "tax-prep", forMinor: false },
       ).kind,
     ).toBe("clean");
   });

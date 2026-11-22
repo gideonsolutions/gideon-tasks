@@ -4,6 +4,8 @@ import type {
   BackgroundCheckChange,
   BackgroundCheckRecord,
   ModerationLogEntry,
+  TaxPreparerChange,
+  TaxPreparerRecord,
 } from "@/lib/types";
 
 export function getModerationQueue(): Promise<ModerationLogEntry[]> {
@@ -53,4 +55,15 @@ export function changeBackgroundCheck(
   change: BackgroundCheckChange,
 ): Promise<BackgroundCheckRecord> {
   return apiClient.post(`/admin/users/${id}/background-check`, change);
+}
+
+export function getTaxPreparer(id: string): Promise<TaxPreparerRecord> {
+  return apiClient.get(`/admin/users/${id}/tax-preparer`);
+}
+
+export function changeTaxPreparer(
+  id: string,
+  change: TaxPreparerChange,
+): Promise<TaxPreparerRecord> {
+  return apiClient.post(`/admin/users/${id}/tax-preparer`, change);
 }
