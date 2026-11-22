@@ -65,16 +65,15 @@ describe("finalizeAssignment", () => {
     expect(params[3]).toBe("tax-prep");
   });
 
-  it("only assigns an IRS Notices & Representation task to a doer with a current PTIN and a credential", async () => {
+  it("only assigns an IRS Notices & Representation task to a doer with a recorded credential, PTIN or not", async () => {
     db.queryOne.mockResolvedValue({ id: args.taskId });
 
     await finalizeAssignment(args);
 
     const [sql, params] = db.queryOne.mock.calls[0];
-    expect(sql).toContain("c.id = tasks.category_id AND c.slug = $5");
-    expect(sql).toMatch(
-      /u\.ptin IS NOT NULL AND u\.ptin_year = \$3\s+AND u\.tax_credential IS NOT NULL/,
-    );
+    const clause = sql.slice(sql.indexOf("c.slug = $5"));
+    expect(clause).toMatch(/u\.status = 'active'\s+AND u\.tax_credential IS NOT NULL\)\)/);
+    expect(clause).not.toContain("ptin");
     expect(params[4]).toBe("irs-help");
   });
 

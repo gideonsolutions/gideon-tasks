@@ -24,7 +24,7 @@ export function TaxPrepNotice({
         {inForm && requirement === "ptin" && (
           <li>Say which returns, which tax years and which states.</li>
         )}
-        {inForm && requirement === "ptin_and_credential" && (
+        {inForm && requirement === "credential" && (
           <li>
             Say what the IRS sent (for example, the notice or letter number on
             it) and which tax years it is about.
@@ -41,9 +41,9 @@ export function TaxPrepNotice({
           </li>
         ) : (
           <li>
-            Only enrolled agents, CPAs and attorneys whose credential and PTIN
-            for this calendar year Gideon Tasks has recorded can apply, ask
-            questions or be booked.
+            Only enrolled agents, CPAs and attorneys whose credential Gideon
+            Tasks has recorded can apply, ask questions or be booked. To have a
+            return prepared, post in Tax Prep instead.
           </li>
         )}
         <li>

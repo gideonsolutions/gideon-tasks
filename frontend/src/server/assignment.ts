@@ -15,8 +15,8 @@ import { IRS_HELP_SLUG, TAX_PREP_SLUG, utcYear } from "./tax-preparers";
  * condition here also covers the webhook path. In the same way, a Tax Prep
  * task is only assigned to an active doer whose PTIN is recorded for the
  * current calendar year (UTC; src/server/tax-preparers.ts), and an IRS
- * Notices & Representation task only to one who also has a recorded
- * credential (Enrolled Agent, CPA or attorney).
+ * Notices & Representation task only to one with a recorded credential
+ * (Enrolled Agent, CPA or attorney).
  *
  * Returns true if this call assigned the task.
  */
@@ -44,7 +44,6 @@ export async function finalizeAssignment(a: {
          OR EXISTS (
          SELECT 1 FROM users u
          WHERE u.id = $1 AND u.status = 'active'
-           AND u.ptin IS NOT NULL AND u.ptin_year = $3
            AND u.tax_credential IS NOT NULL))
      RETURNING id`,
     [a.doerId, a.taskId, utcYear(), TAX_PREP_SLUG, IRS_HELP_SLUG],

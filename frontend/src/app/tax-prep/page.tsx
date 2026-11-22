@@ -45,6 +45,11 @@ const CIRCULAR_230_URL = "https://www.ecfr.gov/current/title-31/section-10.3";
 /** "Enrolled agents, certified public accountants, and attorneys have unlimited representation rights before the IRS." */
 const IRS_CREDENTIALS_URL =
   "https://www.irs.gov/tax-professionals/understanding-tax-return-preparer-credentials-and-qualifications";
+/** "Attorneys and certified public accountants do not need to obtain a PTIN unless they prepare for compensation..." */
+const PTIN_WHO_NEEDS_URL =
+  "https://www.irs.gov/tax-professionals/frequently-asked-questions-do-i-need-a-ptin";
+/** Form 8554: "All enrolled agents must have an active Preparer Tax Identification Number (PTIN)." */
+const FORM_8554_URL = "https://www.irs.gov/pub/irs-pdf/f8554.pdf";
 /** "Use Form 2848 to authorize an individual to represent you before the IRS." */
 const FORM_2848_URL = "https://www.irs.gov/forms-pubs/about-form-2848";
 /** Reporting a paid preparer to the IRS (Form 14157). */
@@ -290,8 +295,7 @@ export default function TaxPrepPage() {
           </p>
           <p className="text-gray-700">
             Only enrolled agents, CPAs and attorneys can take these tasks, once
-            Gideon Tasks has recorded their credential and their PTIN for this
-            calendar year. They are the only ones{" "}
+            Gideon Tasks has recorded their credential. They are the only ones{" "}
             <a href={CIRCULAR_230_URL} className={link}>
               Circular 230 (31 CFR 10.3)
             </a>{" "}
@@ -299,8 +303,17 @@ export default function TaxPrepPage() {
             <a href={IRS_CREDENTIALS_URL} className={link}>
               unlimited representation rights
             </a>
-            . Preparers: have your credential recorded along with your PTIN, as
-            described above.
+            . No PTIN is needed here: the IRS says attorneys and CPAs{" "}
+            <a href={PTIN_WHO_NEEDS_URL} className={link}>
+              need one only to prepare returns for pay
+            </a>
+            , and enrolled agents must hold one to stay enrolled (
+            <a href={FORM_8554_URL} className={link}>
+              Form 8554
+            </a>
+            ). Preparing a return for pay belongs in Tax Prep, where the PTIN
+            is required. Preparers: write to us to have your credential
+            recorded, as described above.
           </p>
           <p className="text-gray-700">
             To deal with the IRS for you, a representative needs your signed

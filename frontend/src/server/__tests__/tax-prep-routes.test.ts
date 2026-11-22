@@ -223,8 +223,8 @@ describe("IRS Notices & Representation: the credential gate on each route", () =
     state.task = { ...state.task, category_slug: "irs-help" };
   });
 
-  it("lets an enrolled agent with a current PTIN apply, ask and be assigned", async () => {
-    state.preparer = enrolledAgent;
+  it("lets an attorney with no PTIN apply, ask and be assigned", async () => {
+    state.preparer = { status: "active", has_ptin: false, ptin_year: null, tax_credential: "attorney" };
     expect((await apply(post(`/tasks/${TASK}/applications`, {}), taskParams)).status).toBe(201);
     expect(
       (await ask(post(`/tasks/${TASK}/questions`, { question_body: "Which notice is it?" }), taskParams))
@@ -252,10 +252,9 @@ describe("IRS Notices & Representation: the credential gate on each route", () =
     expect(inserts()).toHaveLength(0);
   });
 
-  it("refuses an enrolled agent whose PTIN is from last year", async () => {
+  it("lets in an enrolled agent whose PTIN record is from last year", async () => {
     state.preparer = { ...enrolledAgent, ptin_year: 2025 };
     const res = await apply(post(`/tasks/${TASK}/applications`, {}), taskParams);
-    expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: CREDENTIAL_REQUIRED });
+    expect(res.status).toBe(201);
   });
 });

@@ -8,8 +8,8 @@ import { CONTACT_URL, meetsTaxRequirement, taxRequirement } from "@/lib/constant
 /**
  * On a Tax Prep task, shows its children (the apply form) only to a preparer
  * whose PTIN Gideon Tasks has recorded for this calendar year, and on an IRS
- * Notices & Representation task only to one who also has a recorded
- * credential; everyone else sees how to get them recorded. On other tasks it
+ * Notices & Representation task only to one with a recorded credential;
+ * everyone else sees how to get them recorded. On other tasks it
  * shows the children. The API enforces the rule; this only explains it.
  */
 export function PreparerRequired({
@@ -41,9 +41,9 @@ export function PreparerRequired({
         </p>
       ) : (
         <p>
-          Only enrolled agents, CPAs and attorneys whose credential and PTIN
-          for this calendar year Gideon Tasks has recorded can apply to IRS
-          Notices &amp; Representation tasks.
+          Only enrolled agents, CPAs and attorneys whose credential Gideon
+          Tasks has recorded can apply to IRS Notices &amp; Representation
+          tasks.
         </p>
       )}
       <p>

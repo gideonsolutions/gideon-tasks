@@ -27,7 +27,15 @@ export const TAX_PREP_SLUG = "tax-prep";
  * The IRS: "Enrolled agents, certified public accountants, and attorneys
  * have unlimited representation rights before the IRS."
  *   https://www.irs.gov/tax-professionals/understanding-tax-return-preparer-credentials-and-qualifications
- * So it needs a current PTIN and a recorded credential.
+ * So it needs a recorded credential, and no PTIN: "Attorneys and certified
+ * public accountants do not need to obtain a PTIN unless they prepare for
+ * compensation all or substantially all of a federal tax return or claim
+ * for refund", and Form 2848 is among the forms that don't need one
+ *   https://www.irs.gov/tax-professionals/frequently-asked-questions-do-i-need-a-ptin
+ * while "All enrolled agents must have an active Preparer Tax Identification
+ * Number (PTIN)" as a condition of enrollment (Form 8554, Nov. 2022)
+ *   https://www.irs.gov/pub/irs-pdf/f8554.pdf
+ * Preparing a return for pay belongs in Tax Prep, where the PTIN is required.
  */
 export const IRS_HELP_SLUG = "irs-help";
 
@@ -89,18 +97,19 @@ export function hasCurrentPtin(
 }
 
 /** What a category asks of the person who applies, asks, or is booked. */
-export type TaxRequirement = "ptin" | "ptin_and_credential";
+export type TaxRequirement = "ptin" | "credential";
 
 /** The requirement for a category, or null if it has none. */
 export function taxRequirement(categorySlug: string | null | undefined): TaxRequirement | null {
   if (categorySlug === TAX_PREP_SLUG) return "ptin";
-  if (categorySlug === IRS_HELP_SLUG) return "ptin_and_credential";
+  if (categorySlug === IRS_HELP_SLUG) return "credential";
   return null;
 }
 
 /**
  * Whether the user meets the requirement: an active account with a current
- * PTIN and, for IRS Notices & Representation, a recorded credential.
+ * PTIN for Tax Prep, or with a recorded credential for IRS Notices &
+ * Representation.
  */
 export function meetsTaxRequirement(
   requirement: TaxRequirement | null,
@@ -108,22 +117,22 @@ export function meetsTaxRequirement(
   now: Date = new Date(),
 ): boolean {
   if (!requirement) return true;
-  if (!u || u.status !== "active" || !hasCurrentPtin(u, now)) return false;
-  return requirement === "ptin" || isTaxCredential(u.tax_credential);
+  if (!u || u.status !== "active") return false;
+  return requirement === "ptin" ? hasCurrentPtin(u, now) : isTaxCredential(u.tax_credential);
 }
 
 export const PTIN_REQUIRED =
   "Only preparers whose PTIN Gideon Tasks has recorded for this calendar year can apply to, ask about, or be booked for Tax Prep tasks. See /tax-prep";
 
 export const CREDENTIAL_REQUIRED =
-  "Only enrolled agents, CPAs and attorneys whose credential and PTIN for this calendar year Gideon Tasks has recorded can apply to, ask about, or be booked for IRS Notices & Representation tasks. See /tax-prep";
+  "Only enrolled agents, CPAs and attorneys whose credential Gideon Tasks has recorded can apply to, ask about, or be booked for IRS Notices & Representation tasks. See /tax-prep";
 
 /** The 403 message when the requirement isn't met. */
 export function taxRequirementMessage(requirement: TaxRequirement): string {
   switch (requirement) {
     case "ptin":
       return PTIN_REQUIRED;
-    case "ptin_and_credential":
+    case "credential":
       return CREDENTIAL_REQUIRED;
   }
 }

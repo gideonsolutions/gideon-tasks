@@ -107,38 +107,37 @@ describe("taxRequirement and meetsTaxRequirement", () => {
 });
 
 describe("the IRS Notices & Representation credential gate", () => {
-  it("asks for a PTIN and a credential", () => {
-    expect(taxRequirement(IRS_HELP_SLUG)).toBe("ptin_and_credential");
-    expect(taxRequirementMessage("ptin_and_credential")).toBe(CREDENTIAL_REQUIRED);
+  const noPtin = { status: "active", has_ptin: false, ptin_year: null, tax_credential: null };
+
+  it("asks for a credential", () => {
+    expect(taxRequirement(IRS_HELP_SLUG)).toBe("credential");
+    expect(taxRequirementMessage("credential")).toBe(CREDENTIAL_REQUIRED);
   });
 
-  it.each(["enrolled_agent", "cpa", "attorney"])("lets in a(n) %s with a current PTIN", (tax_credential) => {
-    expect(meetsTaxRequirement("ptin_and_credential", { ...current, tax_credential }, NOV_2026)).toBe(true);
+  it.each(["enrolled_agent", "cpa", "attorney"])("lets in a(n) %s, with or without a PTIN", (tax_credential) => {
+    expect(meetsTaxRequirement("credential", { ...noPtin, tax_credential }, NOV_2026)).toBe(true);
+    expect(meetsTaxRequirement("credential", { ...current, tax_credential }, NOV_2026)).toBe(true);
+    expect(meetsTaxRequirement("credential", { ...current, ptin_year: 2025, tax_credential }, NOV_2026)).toBe(true);
   });
 
   it("keeps out a preparer with a PTIN but no credential", () => {
-    expect(meetsTaxRequirement("ptin_and_credential", current, NOV_2026)).toBe(false);
+    expect(meetsTaxRequirement("credential", current, NOV_2026)).toBe(false);
     // They can still take Tax Prep.
     expect(meetsTaxRequirement("ptin", current, NOV_2026)).toBe(true);
   });
 
-  it("keeps out a credential without a current PTIN", () => {
-    const ea = { ...current, tax_credential: "enrolled_agent" };
-    expect(meetsTaxRequirement("ptin_and_credential", { ...ea, ptin_year: 2025 }, NOV_2026)).toBe(false);
-    expect(meetsTaxRequirement("ptin_and_credential", { ...ea, has_ptin: false }, NOV_2026)).toBe(false);
+  it("doesn't let a credential stand in for the PTIN in Tax Prep", () => {
+    expect(meetsTaxRequirement("ptin", { ...noPtin, tax_credential: "attorney" }, NOV_2026)).toBe(false);
   });
 
   it("keeps out an unknown credential and an account that isn't active", () => {
     expect(
-      meetsTaxRequirement("ptin_and_credential", { ...current, tax_credential: "enrolled_actuary" }, NOV_2026),
+      meetsTaxRequirement("credential", { ...current, tax_credential: "enrolled_actuary" }, NOV_2026),
     ).toBe(false);
     expect(
-      meetsTaxRequirement(
-        "ptin_and_credential",
-        { ...current, tax_credential: "cpa", status: "suspended" },
-        NOV_2026,
-      ),
+      meetsTaxRequirement("credential", { ...current, tax_credential: "cpa", status: "suspended" }, NOV_2026),
     ).toBe(false);
+    expect(meetsTaxRequirement("credential", null, NOV_2026)).toBe(false);
   });
 });
 
