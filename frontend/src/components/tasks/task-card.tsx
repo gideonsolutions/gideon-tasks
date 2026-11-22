@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Task } from "@/lib/types";
 import { TaskStatusBadge } from "./task-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { formatCents, formatDate, formatRelative } from "@/lib/utils/format";
 import { calculateFees } from "@/lib/utils/fees";
 import { GIDEON_FEE_BPS } from "@/lib/constants";
@@ -47,9 +48,16 @@ export function TaskCard({ task }: TaskCardProps) {
             <span>Due {formatDate(task.deadline)}</span>
           </div>
         </div>
-        <p className="text-xs text-gray-400 mt-2">
-          Posted {formatRelative(task.created_at)}
-        </p>
+        <div className="mt-2 flex items-center gap-2">
+          <p className="text-xs text-gray-400">
+            Posted {formatRelative(task.created_at)}
+          </p>
+          {task.for_minor && (
+            <Badge className="bg-amber-100 text-amber-800">
+              For a child under 18
+            </Badge>
+          )}
+        </div>
       </div>
     </Link>
   );

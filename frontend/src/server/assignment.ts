@@ -9,6 +9,10 @@ import { logAudit } from "./audit";
  * twice: only the call that moves the task out of `published` writes the
  * application updates and the audit entry, which are the same as before.
  *
+ * A task for a child (for_minor) is only assigned to a doer whose
+ * background check is recorded; the assign route checks this first, and the
+ * condition here also covers the webhook path.
+ *
  * Returns true if this call assigned the task.
  */
 export async function finalizeAssignment(a: {
@@ -20,6 +24,10 @@ export async function finalizeAssignment(a: {
   const updated = await queryOne<{ id: string }>(
     `UPDATE tasks SET status = 'assigned', assigned_doer_id = $1, updated_at = now()
      WHERE id = $2 AND status = 'published'
+       AND (NOT for_minor OR EXISTS (
+         SELECT 1 FROM users u
+         WHERE u.id = $1 AND u.status = 'active'
+           AND u.background_check_cleared_at IS NOT NULL))
      RETURNING id`,
     [a.doerId, a.taskId],
   );

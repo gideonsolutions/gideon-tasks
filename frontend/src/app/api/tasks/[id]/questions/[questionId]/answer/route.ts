@@ -29,10 +29,14 @@ export async function POST(
       task_id: string;
       requester_id: string;
       answer_body: string | null;
+      for_minor: boolean;
+      category_slug: string | null;
     }>(
-      `SELECT q.task_id, t.requester_id, q.answer_body
+      `SELECT q.task_id, t.requester_id, q.answer_body, t.for_minor,
+              c.slug AS category_slug
        FROM task_questions q
        JOIN tasks t ON t.id = q.task_id
+       LEFT JOIN categories c ON c.id = t.category_id
        WHERE q.id = $1 AND q.task_id = $2`,
       [questionId, id],
     );
@@ -44,7 +48,10 @@ export async function POST(
       throw badRequest("Question already answered");
     }
 
-    const moderation = moderateContent(body.answer_body);
+    const moderation = moderateContent(body.answer_body, {
+      categorySlug: question.category_slug,
+      forMinor: question.for_minor,
+    });
     if (moderation.kind === "rejected") throw contentRejected(moderation.reason);
 
     await execute(

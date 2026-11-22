@@ -270,6 +270,19 @@ CREATE TABLE IF NOT EXISTS password_resets (
 
 CREATE INDEX IF NOT EXISTS idx_password_resets_user_id_created_at ON password_resets(user_id, created_at);
 
+-- Tutoring for a child under 18. The account holder, the child's parent or
+-- legal guardian, ticks "This is for my child under 18; I'm their parent or
+-- legal guardian" on a Tutoring task. The API only allows it in Tutoring.
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS for_minor BOOLEAN NOT NULL DEFAULT false;
+
+-- Background checks. An admin records the result after reviewing the
+-- third-party provider's report (no provider is integrated). Only a user with
+-- background_check_cleared_at set may apply to, ask about, or be assigned a
+-- for_minor task. The note is for admins: what was checked, or why it was
+-- cleared.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS background_check_cleared_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS background_check_note TEXT;
+
 -- Revoke UPDATE and DELETE on audit_log via a trigger (defense in depth)
 CREATE OR REPLACE FUNCTION prevent_audit_log_mutation() RETURNS TRIGGER AS $$
 BEGIN

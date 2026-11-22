@@ -49,6 +49,7 @@ export default function EditTaskPage({
               location_address: task.location_address ?? undefined,
               price_cents: task.price_cents,
               deadline: task.deadline,
+              for_minor: task.for_minor,
             }}
           />
         </CardContent>

@@ -1,5 +1,10 @@
 import { apiClient } from "./client";
-import type { AuditLogEntry, ModerationLogEntry } from "@/lib/types";
+import type {
+  AuditLogEntry,
+  BackgroundCheckChange,
+  BackgroundCheckRecord,
+  ModerationLogEntry,
+} from "@/lib/types";
 
 export function getModerationQueue(): Promise<ModerationLogEntry[]> {
   return apiClient.get("/admin/moderation");
@@ -37,4 +42,15 @@ export function suspendUser(id: string): Promise<void> {
 
 export function banUser(id: string): Promise<void> {
   return apiClient.post(`/admin/users/${id}/ban`);
+}
+
+export function getBackgroundCheck(id: string): Promise<BackgroundCheckRecord> {
+  return apiClient.get(`/admin/users/${id}/background-check`);
+}
+
+export function changeBackgroundCheck(
+  id: string,
+  change: BackgroundCheckChange,
+): Promise<BackgroundCheckRecord> {
+  return apiClient.post(`/admin/users/${id}/background-check`, change);
 }

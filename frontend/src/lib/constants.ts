@@ -93,3 +93,10 @@ export const REVIEW_WINDOW_DAYS = 7;
  * Gideon Tasks). Gideon Tasks has no contact address of its own yet.
  */
 export const CONTACT_URL = "https://www.gideonsolutions.us/contact";
+
+/** The Tutoring category's slug; a task for a child must be in it. */
+export { TUTORING_SLUG } from "@/server/moderation";
+
+/** The guardian's tick on a Tutoring task (tasks.for_minor). */
+export const GUARDIAN_TICK_LABEL =
+  "This is for my child under 18; I'm their parent or legal guardian";

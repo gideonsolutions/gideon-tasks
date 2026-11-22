@@ -36,6 +36,17 @@ describe("finalizeAssignment", () => {
     );
   });
 
+  it("only assigns a task for a child to a doer with a recorded background check", async () => {
+    db.queryOne.mockResolvedValue({ id: args.taskId });
+
+    await finalizeAssignment(args);
+
+    const [sql] = db.queryOne.mock.calls[0];
+    expect(sql).toContain("NOT for_minor OR EXISTS");
+    expect(sql).toContain("background_check_cleared_at IS NOT NULL");
+    expect(sql).toContain("u.id = $1");
+  });
+
   it("does nothing the second time (route and webhook both finishing)", async () => {
     db.queryOne.mockResolvedValue(null);
 
