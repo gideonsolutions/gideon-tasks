@@ -1,7 +1,7 @@
 /**
- * Columns of `users` that only admins see. They are left out of what a user
- * gets back about themselves (/api/users/me and the login response), and
- * never appear on public profiles.
+ * Columns of `users` that only admins see (or nobody: the two-step secret).
+ * They are left out of what a user gets back about themselves (/api/users/me
+ * and the login response), and never appear on public profiles.
  */
 export const ADMIN_ONLY_USER_COLUMNS = [
   "password_hash",
@@ -11,6 +11,9 @@ export const ADMIN_ONLY_USER_COLUMNS = [
   "ptin_recorded_by",
   "tax_credential_note",
   "tax_credential_recorded_by",
+  // Two-step sign-in's sealed secret and replay counter are never sent to anyone.
+  "totp_secret_enc",
+  "totp_last_step",
 ] as const;
 
 type AdminOnly = (typeof ADMIN_ONLY_USER_COLUMNS)[number];

@@ -4,6 +4,8 @@ import type {
   RegisterResponse,
   LoginRequest,
   LoginResponse,
+  LoginSession,
+  TwoStepLoginRequest,
   RefreshRequest,
   RefreshResponse,
   VerifyEmailRequest,
@@ -21,6 +23,10 @@ export function register(data: RegisterRequest): Promise<RegisterResponse> {
 
 export function login(data: LoginRequest): Promise<LoginResponse> {
   return apiClient.post("/auth/login", data);
+}
+
+export function loginTwoStep(data: TwoStepLoginRequest): Promise<LoginSession> {
+  return apiClient.post("/auth/login/two-step", data);
 }
 
 export function logout(): Promise<void> {

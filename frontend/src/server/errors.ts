@@ -13,6 +13,7 @@ type ErrorKind =
   | "invalid_transition"
   | "payment_error"
   | "trust_level_insufficient"
+  | "two_step_required"
   | "internal";
 
 const STATUS: Record<ErrorKind, number> = {
@@ -27,6 +28,7 @@ const STATUS: Record<ErrorKind, number> = {
   invalid_transition: 409,
   payment_error: 400,
   trust_level_insufficient: 403,
+  two_step_required: 403,
   internal: 500,
 };
 
@@ -59,8 +61,18 @@ export const paymentError = (msg: string) => new AppError("payment_error", msg);
 export const trustLevelInsufficient = (msg: string) =>
   new AppError("trust_level_insufficient", msg);
 
+/** Where someone sets up two-step sign-in. */
+export const TWO_STEP_SETUP_PATH = "/profile/security";
+export const twoStepRequired = (msg: string) => new AppError("two_step_required", msg);
+
 export function errorResponse(err: unknown): NextResponse {
   if (err instanceof AppError) {
+    if (err.kind === "two_step_required") {
+      return NextResponse.json(
+        { error: err.message, code: "two_step_required", setup_url: TWO_STEP_SETUP_PATH },
+        { status: err.status },
+      );
+    }
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
   console.error("Internal error:", err);

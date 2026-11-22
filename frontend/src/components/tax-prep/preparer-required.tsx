@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { CONTACT_URL, meetsTaxRequirement, taxRequirement } from "@/lib/constants";
+import { useDocumentsEnabled } from "@/lib/hooks/use-documents-enabled";
 
 /**
  * On a Tax Prep task, shows its children (the apply form) only to a preparer
@@ -21,6 +22,7 @@ export function PreparerRequired({
 }) {
   const { user, fetchUser } = useAuth();
   const requirement = taxRequirement(categorySlug);
+  const documentsEnabled = useDocumentsEnabled(!requirement);
 
   // The signed-in user is cached from login, so read it again in case an
   // admin has recorded a PTIN since.
@@ -48,9 +50,15 @@ export function PreparerRequired({
       )}
       <p>
         To have yours recorded,{" "}
-        <a href={CONTACT_URL} className="text-blue-600 hover:underline">
-          contact us
-        </a>
+        {documentsEnabled ? (
+          <Link href="/profile/preparer" className="text-blue-600 hover:underline">
+            send us proof of it
+          </Link>
+        ) : (
+          <a href={CONTACT_URL} className="text-blue-600 hover:underline">
+            contact us
+          </a>
+        )}
         . See{" "}
         <Link href="/tax-prep#preparers" className="text-blue-600 hover:underline">
           Tax Prep for preparers

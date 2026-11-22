@@ -2,6 +2,7 @@ import { z } from "zod";
 import { handle, notFound, badRequest, conflict } from "@/server/errors";
 import { queryOne } from "@/server/db";
 import { requireAdmin } from "@/server/auth";
+import { requireTwoStep } from "@/server/two-step/service";
 import { logAudit } from "@/server/audit";
 import { ok, parseBody, uuidSchema } from "@/server/route-helpers";
 import {
@@ -25,6 +26,13 @@ export const runtime = "nodejs";
 
 const note = z.string().trim().min(1, "Add a short note").max(500);
 
+/**
+ * Recording from the review queue: the proof document the admin opened. It
+ * must be this user's, waiting for review, and of the kind being recorded;
+ * it is marked approved in the same request (src/server/documents/proofs.ts).
+ */
+const proofId = uuidSchema.optional();
+
 const BodySchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("record_ptin"),
@@ -41,6 +49,7 @@ const BodySchema = z.discriminatedUnion("action", [
     confirms_current_ptin: z.literal(true, {
       message: "Confirm that the PTIN is current for this year and belongs to this person",
     }),
+    proof_id: proofId,
   }),
   z.object({ action: z.literal("clear_ptin"), note }),
   z.object({
@@ -51,6 +60,7 @@ const BodySchema = z.discriminatedUnion("action", [
     confirms_credential: z.literal(true, {
       message: "Confirm that the credential is current and belongs to this person",
     }),
+    proof_id: proofId,
   }),
   z.object({ action: z.literal("clear_credential"), note }),
 ]);
@@ -93,6 +103,20 @@ function view(row: Row) {
   return { ...row, current_year: utcYear(), recordable_years: recordablePtinYears() };
 }
 
+/** The proof document being approved: this user's, waiting for review, of this kind. */
+async function pendingProofFor(userId: string, proofId: string, kind: string) {
+  const proof = await queryOne<{ id: string; user_id: string; kind: string; status: string }>(
+    `SELECT id, user_id, kind, status FROM preparer_proofs WHERE id = $1`,
+    [proofId],
+  );
+  if (!proof || proof.user_id !== userId) throw notFound("Document not found");
+  if (proof.status !== "pending") throw conflict("This document isn't waiting for review");
+  if (proof.kind !== kind) {
+    throw badRequest("This document proves something else. Record what it shows, or reject it");
+  }
+  return proof;
+}
+
 async function userId(params: Promise<{ id: string }>): Promise<string> {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) throw badRequest("Not a user ID");
@@ -123,6 +147,14 @@ export async function POST(
 
     const before = await queryOne<Row>(`SELECT ${COLUMNS} FROM users WHERE id = $1`, [id]);
     if (!before) throw notFound("User not found");
+
+    const fromProof = (body.action === "record_ptin" || body.action === "record_credential") && body.proof_id;
+    // Approving from the review queue means the admin opened the document:
+    // that needs two-step sign-in, like every other document route.
+    if (fromProof) await requireTwoStep(admin);
+    const proof = fromProof
+      ? await pendingProofFor(id, body.proof_id!, body.action === "record_ptin" ? "ptin" : body.credential)
+      : null;
 
     let after: Row | null;
     switch (body.action) {
@@ -194,6 +226,25 @@ export async function POST(
       clear_credential: "admin.user.tax_credential_cleared",
     }[body.action];
     await logAudit(admin.userId, action, "user", id, pick(before, fields), pick(after, fields));
+
+    if (proof) {
+      const approved = await queryOne<{ id: string }>(
+        `UPDATE preparer_proofs SET status = 'approved', review_note = $1,
+           reviewed_by = $2, reviewed_at = now()
+         WHERE id = $3 AND status = 'pending' RETURNING id`,
+        [body.note, admin.userId, proof.id],
+      );
+      if (approved) {
+        await logAudit(
+          admin.userId,
+          "preparer_proof.approved",
+          "preparer_proof",
+          proof.id,
+          { status: "pending" },
+          { status: "approved", user_id: id, recorded: action },
+        );
+      }
+    }
     return ok(view(after));
   });
 }

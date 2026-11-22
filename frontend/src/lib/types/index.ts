@@ -1,8 +1,9 @@
 // All TypeScript interfaces matching backend Rust models
 
 import type { PreparerBadges, TaxCredential } from "@/server/tax-preparers";
+import type { DocumentContentType, ProofKind } from "@/server/documents/rules";
 
-export type { PreparerBadges, TaxCredential };
+export type { PreparerBadges, TaxCredential, DocumentContentType, ProofKind };
 
 // ─── Enums ───────────────────────────────────────────────
 
@@ -60,6 +61,8 @@ export interface User {
   background_check_cleared_at: string | null;
   /** Whether an admin has recorded a PTIN (the PTIN itself is for admins). */
   has_ptin: boolean;
+  /** When two-step sign-in was turned on; null if it is off. */
+  totp_enabled_at: string | null;
   /** The calendar year the recorded PTIN was verified for. */
   ptin_year: number | null;
   /** The credential an admin recorded, shown as a badge. */
@@ -115,6 +118,8 @@ export type TaxPreparerChange =
       confirms_current_ptin: true;
       /** Required for next year's PTIN. */
       confirms_renewal_active_this_year?: true;
+      /** Recording from the review queue: the proof document to mark approved. */
+      proof_id?: string;
     }
   | { action: "clear_ptin"; note: string }
   | {
@@ -122,6 +127,7 @@ export type TaxPreparerChange =
       credential: TaxCredential;
       note: string;
       confirms_credential: true;
+      proof_id?: string;
     }
   | { action: "clear_credential"; note: string };
 
@@ -403,10 +409,58 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface LoginResponse {
+export interface LoginSession {
   access_token: string;
   refresh_token: string;
   user: User;
+  /** After signing in with a recovery code: how many are left. */
+  recovery_codes_left?: number;
+}
+
+/** The password was right, and the account has two-step sign-in: a code is next. */
+export interface LoginTwoStepRequired {
+  two_step_required: true;
+  /** A 5-minute token for /auth/login/two-step; not a session. */
+  pending_token: string;
+  expires_in: number;
+}
+
+export type LoginResponse = LoginSession | LoginTwoStepRequired;
+
+export interface TwoStepLoginRequest {
+  pending_token: string;
+  code: string;
+}
+
+export interface TwoStepStatus {
+  /** The server can encrypt secrets (MFA_ENCRYPTION_KEY is set). */
+  available: boolean;
+  enabled: boolean;
+  enabled_at: string | null;
+  setup_in_progress: boolean;
+  recovery_codes_left: number;
+  /** This session passed two-step sign-in. */
+  session_verified: boolean;
+}
+
+export interface TwoStepSetup {
+  /** The secret, grouped for typing into an app. */
+  key: string;
+  otpauth_uri: string;
+  qr_svg: string;
+}
+
+export interface TwoStepAdminView {
+  id: string;
+  email: string;
+  legal_first_name: string;
+  legal_last_name: string;
+  status: UserStatus;
+  enabled: boolean;
+  enabled_at: string | null;
+  failures: number;
+  locked_until: string | null;
+  recovery_codes_left: number;
 }
 
 export interface RefreshRequest {
@@ -493,6 +547,8 @@ export type AssignTaskResponse =
 export interface ApiError {
   error: string;
   status: number;
+  /** "two_step_required": set up, or sign in again with, two-step sign-in. */
+  code?: string;
 }
 
 // ─── Pagination ──────────────────────────────────────────
@@ -512,4 +568,80 @@ export interface JwtClaims {
   trust_level: number;
   exp: number;
   iat: number;
+}
+
+// ─── Documents ───────────────────────────────────────────
+
+export interface DocumentsConfig {
+  /** False when document storage isn't set up: the pages hide it. */
+  enabled: boolean;
+  content_types: DocumentContentType[];
+  accept: string;
+  max_file_bytes: number;
+  max_files_per_task: number;
+  task_retention_days: number;
+  proof_retention_days: number;
+}
+
+/** What the server returns when an upload starts: a token for one pathname. */
+export interface UploadStart {
+  pathname: string;
+  content_type: DocumentContentType;
+  client_token: string;
+  valid_until: string;
+}
+
+export interface TaskDocument {
+  id: string;
+  task_id: string;
+  uploader_id: string;
+  display_name: string | null;
+  content_type: DocumentContentType;
+  size_bytes: number | null;
+  uploaded_at: string | null;
+  /** Uploaded by the signed-in user (who alone can delete it). */
+  mine: boolean;
+}
+
+export interface TaskDocumentList {
+  documents: TaskDocument[];
+  access: "participant" | "admin_dispute";
+  /** When the files will be deleted, once the task is closed. */
+  delete_after: string | null;
+  can_upload: boolean;
+}
+
+export type ProofStatus = "uploading" | "pending" | "approved" | "rejected" | "withdrawn" | "abandoned";
+
+export interface PreparerProof {
+  id: string;
+  kind: ProofKind;
+  display_name: string | null;
+  content_type: DocumentContentType;
+  size_bytes: number | null;
+  status: ProofStatus;
+  /** On a rejection: the admin's note to the tasker. */
+  review_note: string | null;
+  reviewed_at: string | null;
+  uploaded_at: string | null;
+  file_deleted: boolean;
+  delete_after: string | null;
+}
+
+export interface ProofQueueItem extends PreparerProof {
+  user: {
+    id: string;
+    legal_first_name: string;
+    legal_last_name: string;
+    email: string;
+    status: UserStatus;
+    ptin_year: number | null;
+    tax_credential: TaxCredential | null;
+  };
+}
+
+export interface ProofQueue {
+  current_year: number;
+  recordable_years: number[];
+  proofs: ProofQueueItem[];
 }

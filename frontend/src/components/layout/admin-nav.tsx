@@ -9,6 +9,7 @@ const tabs = [
   { href: "/admin/disputes", label: "Disputes" },
   { href: "/admin/audit-log", label: "Audit Log" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/verification", label: "Verification" },
   { href: "/admin/clerk", label: "Gideon Clerk" },
 ];
 

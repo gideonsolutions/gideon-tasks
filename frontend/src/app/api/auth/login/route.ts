@@ -1,15 +1,10 @@
 import { z } from "zod";
 import { handle, unauthorized, forbidden } from "@/server/errors";
-import { execute, queryOne } from "@/server/db";
-import {
-  createAccessToken,
-  generateRefreshToken,
-  hashRefreshToken,
-  newId,
-  verifyPassword,
-} from "@/server/auth";
+import { queryOne } from "@/server/db";
+import { verifyPassword } from "@/server/auth";
+import { issueSession } from "@/server/session";
+import { issuePendingLogin, PENDING_LOGIN_TTL_SECS } from "@/server/two-step/pending-login";
 import { logAudit } from "@/server/audit";
-import { env } from "@/server/env";
 import { ok, parseBody } from "@/server/route-helpers";
 import { userSelfView } from "@/server/user-self-view";
 
@@ -41,6 +36,8 @@ interface UserRow {
   ptin: string | null;
   ptin_year: number | null;
   tax_credential: string | null;
+  /** When two-step sign-in was turned on; null if it is off. */
+  totp_enabled_at: string | null;
   is_admin: boolean;
   created_at: string;
   updated_at: string;
@@ -62,26 +59,23 @@ export async function POST(req: Request) {
       throw unauthorized("Invalid email or password");
     }
 
-    const accessToken = await createAccessToken(
-      user.id,
-      user.is_admin,
-      user.trust_level,
-    );
-    const refreshToken = generateRefreshToken();
-    const tokenHash = hashRefreshToken(refreshToken);
-    const expiresAt = new Date(Date.now() + env.jwtRefreshExpirySecs * 1000);
+    // With two-step sign-in on, the password earns only a 5-minute
+    // pending-login token for the code step (/api/auth/login/two-step):
+    // no access or refresh token until a code is right.
+    if (user.totp_enabled_at) {
+      await logAudit(user.id, "user.login.two_step_required", "user", user.id, null, null);
+      return ok({
+        two_step_required: true,
+        pending_token: await issuePendingLogin(user.id, user.password_hash),
+        expires_in: PENDING_LOGIN_TTL_SECS,
+      });
+    }
 
-    await execute(
-      `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at)
-       VALUES ($1, $2, $3, $4, now())`,
-      [newId(), user.id, tokenHash, expiresAt],
-    );
-
+    const session = await issueSession(user, false);
     await logAudit(user.id, "user.login", "user", user.id, null, null);
 
     return ok({
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      ...session,
       // Without the password hash and the columns only admins see.
       user: userSelfView({ ...user }),
     });

@@ -61,14 +61,16 @@ class ApiClient {
 
     if (!response.ok) {
       let message = "An unexpected error occurred";
+      let code: string | undefined;
       try {
         const data = await response.json();
         message = data.error ?? message;
+        code = data.code;
       } catch {
         // Response wasn't JSON
       }
 
-      const error: ApiError = { error: message, status: response.status };
+      const error: ApiError = { error: message, status: response.status, ...(code && { code }) };
 
       // Auto-redirect to login on 401
       if (response.status === 401) {
@@ -101,6 +103,33 @@ class ApiClient {
 
   delete<T>(path: string): Promise<T> {
     return this.request<T>(path, { method: "DELETE" });
+  }
+
+  /**
+   * Fetches a file the API streams (a document download), with the same
+   * sign-in as every other call. The file never has a URL of its own.
+   */
+  async file(path: string): Promise<Blob> {
+    await this.refreshIfNeeded();
+    const token = this.getToken();
+    const response = await fetch(`${BASE_URL}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      let message = "Could not open the file";
+      let code: string | undefined;
+      try {
+        const data = await response.json();
+        message = data.error ?? message;
+        code = data.code;
+      } catch {
+        // Not JSON
+      }
+      if (response.status === 401) useAuthStore.getState().logout();
+      throw { error: message, status: response.status, ...(code && { code }) } as ApiError;
+    }
+    return response.blob();
   }
 }
 

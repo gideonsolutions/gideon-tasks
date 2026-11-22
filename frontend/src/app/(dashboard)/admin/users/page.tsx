@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import * as adminApi from "@/lib/api/admin";
 import { BackgroundCheckControl } from "@/components/admin/background-check-control";
 import { TaxPreparerControl } from "@/components/admin/tax-preparer-control";
+import { TwoStepResetControl } from "@/components/admin/two-step-reset-control";
 import type { ApiError } from "@/lib/types";
 
 export default function AdminUsersPage() {
@@ -76,6 +77,8 @@ export default function AdminUsersPage() {
       <BackgroundCheckControl />
 
       <TaxPreparerControl />
+
+      <TwoStepResetControl />
 
       <Dialog
         open={confirmAction !== null}
