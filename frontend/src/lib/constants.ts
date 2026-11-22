@@ -87,3 +87,9 @@ export const TASK_STATUSES = [
 ] as const;
 
 export const REVIEW_WINDOW_DAYS = 7;
+
+/**
+ * Where people write to a person at Gideon Solutions (the company that runs
+ * Gideon Tasks). Gideon Tasks has no contact address of its own yet.
+ */
+export const CONTACT_URL = "https://www.gideonsolutions.us/contact";

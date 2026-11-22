@@ -17,14 +17,26 @@ import type {
 } from "@/lib/types";
 import * as tasksApi from "@/lib/api/tasks";
 import * as categoriesApi from "@/lib/api/categories";
+import { initialCategoryId } from "@/lib/utils/categories";
 
 interface TaskFormProps {
   initialData?: Partial<CreateTaskRequest>;
+  /**
+   * Category to select when the form opens, by slug (e.g. "tutoring" from
+   * /tasks/new?category=tutoring). Ignored when initialData has a category or
+   * the slug doesn't match an active category.
+   */
+  initialCategorySlug?: string;
   taskId?: string;
   mode?: "create" | "edit";
 }
 
-export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps) {
+export function TaskForm({
+  initialData,
+  initialCategorySlug,
+  taskId,
+  mode = "create",
+}: TaskFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState({
     title: initialData?.title ?? "",
@@ -50,11 +62,13 @@ export function TaskForm({ initialData, taskId, mode = "create" }: TaskFormProps
       .then((rows) => {
         setCategories(rows);
         setForm((prev) =>
-          prev.category_id ? prev : { ...prev, category_id: rows[0]?.id ?? "" },
+          prev.category_id
+            ? prev
+            : { ...prev, category_id: initialCategoryId(rows, initialCategorySlug) },
         );
       })
       .catch(() => setError("Failed to load categories"));
-  }, []);
+  }, [initialCategorySlug]);
 
   const priceCents = Math.round(parseFloat(form.price_dollars || "0") * 100);
 

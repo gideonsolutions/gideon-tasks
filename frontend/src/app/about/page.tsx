@@ -27,9 +27,12 @@ const faqs: QA[] = [
     a: (
       <>
         A task marketplace open to everyone in the US. Requesters post
-        everyday work — yard work, moving help, tutoring, tech help, tax prep,
-        and more — and doers apply, complete the work, and get paid through
-        escrow. Payments are in US dollars.
+        everyday work — yard work, moving help,{" "}
+        <Link href="/tutoring" className="text-blue-600 hover:underline">
+          tutoring
+        </Link>
+        , tech help, tax prep, and more — and doers apply, complete the work,
+        and get paid through escrow. Payments are in US dollars.
       </>
     ),
   },
@@ -121,8 +124,11 @@ const faqs: QA[] = [
     a: (
       <>
         Most legitimate everyday work: cleaning, handyman, moving and hauling,
-        yard work, errands, pet care, tutoring, computer help, event help, tax
-        prep, and more. Content is auto-moderated when you publish — anything
+        yard work, errands, pet care,{" "}
+        <Link href="/tutoring" className="text-blue-600 hover:underline">
+          tutoring
+        </Link>
+        , computer help, event help, tax prep, and more. Content is auto-moderated when you publish — anything
         involving minors as task subjects, sexual content, weapons, illegal
         drugs, gambling, or trafficking is rejected. Contact information
         (phone, email, URLs) is not permitted in task descriptions; doers and
