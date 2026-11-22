@@ -1,5 +1,7 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TaskForm } from "@/components/tasks/task-form";
 import { EmailVerificationNotice } from "@/components/auth/email-verification-notice";
@@ -11,6 +13,17 @@ import {
   maxTaskValueCents,
 } from "@/lib/constants";
 import { formatCents } from "@/lib/utils/format";
+import { Spinner } from "@/components/ui/spinner";
+
+/**
+ * ?category=<slug> preselects a category, e.g. /tasks/new?category=tutoring.
+ * The page is prerendered, so the query is read in the browser with
+ * useSearchParams (inside Suspense) rather than the page's searchParams prop.
+ */
+function NewTaskForm() {
+  const category = useSearchParams().get("category") ?? undefined;
+  return <TaskForm initialCategorySlug={category} />;
+}
 
 export default function NewTaskPage() {
   const { user, trustLevel } = useAuth();
@@ -39,7 +52,15 @@ export default function NewTaskPage() {
                 {formatCents(maxTaskValueCents(trustLevel))}, and you can have
                 up to {maxActivePosted(trustLevel)} active tasks at a time.
               </p>
-              <TaskForm />
+              <Suspense
+                fallback={
+                  <div className="flex justify-center py-6">
+                    <Spinner />
+                  </div>
+                }
+              >
+                <NewTaskForm />
+              </Suspense>
             </>
           )}
         </CardContent>

@@ -17,8 +17,11 @@ export function HomeHero() {
         </h1>
       </div>
       <p className="mt-2 text-gray-700">
-        Gideon Tasks is a marketplace for everyday work — errands, repairs,
-        tutoring, tax prep, and more — open to everyone in the US. You sign up
+        Gideon Tasks is a marketplace for everyday work — errands, repairs,{" "}
+        <Link href="/tutoring" className="text-blue-600 hover:underline">
+          tutoring
+        </Link>
+        , tax prep, and more — open to everyone in the US. You sign up
         with your email address. An invite from a church, nonprofit, or
         community organization is optional; it lets them vouch for you, which
         raises your trust. Payments go through Stripe Connect with escrow, in
