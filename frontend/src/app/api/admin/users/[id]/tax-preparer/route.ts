@@ -4,7 +4,12 @@ import { queryOne } from "@/server/db";
 import { requireAdmin } from "@/server/auth";
 import { logAudit } from "@/server/audit";
 import { ok, parseBody, uuidSchema } from "@/server/route-helpers";
-import { normalizePtin, TAX_CREDENTIALS, utcYear } from "@/server/tax-preparers";
+import {
+  normalizePtin,
+  recordablePtinYears,
+  TAX_CREDENTIALS,
+  utcYear,
+} from "@/server/tax-preparers";
 
 export const runtime = "nodejs";
 
@@ -13,8 +18,10 @@ export const runtime = "nodejs";
 // No lookup is integrated: the admin checks the IRS Directory of Federal Tax
 // Return Preparers with Credentials and Select Qualifications
 // (https://irs.treasury.gov/rpo/rpo.jsf) and, for a CPA, the state board.
-// Only a PTIN recorded for the current calendar year (UTC) lets a user take
-// Tax Prep tasks (src/server/tax-preparers.ts). Every change is audited.
+// A PTIN recorded for the current calendar year (UTC) or later lets a user
+// take Tax Prep tasks. From December 1 (New York time) next year's PTIN may
+// be recorded too, as a renewal of one that is also active this year
+// (src/server/tax-preparers.ts). Every change is audited.
 
 const note = z.string().trim().min(1, "Add a short note").max(500);
 
@@ -22,8 +29,13 @@ const BodySchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("record_ptin"),
     ptin: z.string(),
-    /** The calendar year the PTIN was verified for: only the current one (UTC). */
+    /** The calendar year the PTIN was verified for: one of recordablePtinYears(). */
     year: z.number().int(),
+    /**
+     * Required for next year's PTIN: it is a renewal, and the PTIN is also
+     * active this year (a new PTIN for next year isn't valid until January 1).
+     */
+    confirms_renewal_active_this_year: z.literal(true).optional(),
     note,
     /** The admin confirms the PTIN is current for that year and belongs to this person. */
     confirms_current_ptin: z.literal(true, {
@@ -76,9 +88,9 @@ function pick(row: Row, fields: readonly (keyof Row)[]): Record<string, unknown>
   return Object.fromEntries(fields.map((f) => [f, row[f]]));
 }
 
-/** The record, plus the current year, so the admin page knows what it may record. */
+/** The record, plus the years a PTIN may be recorded for now. */
 function view(row: Row) {
-  return { ...row, current_year: utcYear() };
+  return { ...row, current_year: utcYear(), recordable_years: recordablePtinYears() };
 }
 
 async function userId(params: Promise<{ id: string }>): Promise<string> {
@@ -117,10 +129,18 @@ export async function POST(
       case "record_ptin": {
         const ptin = normalizePtin(body.ptin);
         if (!ptin) throw badRequest("A PTIN is the letter P followed by eight digits");
-        const year = utcYear();
-        if (body.year !== year) {
+        const year = body.year;
+        const allowed = recordablePtinYears();
+        if (!allowed.includes(year)) {
           throw badRequest(
-            `Only a PTIN for the current calendar year (${year}) can be recorded. PTINs expire on December 31 each year`,
+            allowed.length > 1
+              ? `A PTIN can be recorded for ${allowed.join(" or ")} only`
+              : `Only a PTIN for the current calendar year (${allowed[0]}) can be recorded. Next year's can be recorded from December 1`,
+          );
+        }
+        if (year > utcYear() && body.confirms_renewal_active_this_year !== true) {
+          throw badRequest(
+            `Confirm that this is a renewal and the PTIN is also active for ${utcYear()}. A new PTIN for ${year} isn't valid until January 1; record it then`,
           );
         }
         const other = await queryOne<{ id: string }>(

@@ -7,7 +7,7 @@ import { CONTACT_URL, meetsTaxRequirement, taxRequirement } from "@/lib/constant
 
 /**
  * On a Tax Prep task, shows its children (the apply form) only to a preparer
- * whose PTIN Gideon Tasks has recorded for this calendar year, and on an IRS
+ * whose current PTIN Gideon Tasks has recorded, and on an IRS
  * Notices & Representation task only to one with a recorded credential;
  * everyone else sees how to get them recorded. On other tasks it
  * shows the children. The API enforces the rule; this only explains it.
@@ -36,8 +36,8 @@ export function PreparerRequired({
     <div className="space-y-2 text-sm text-gray-700">
       {requirement === "ptin" ? (
         <p>
-          Only preparers whose PTIN Gideon Tasks has recorded for this
-          calendar year can apply to Tax Prep tasks.
+          Only preparers whose current PTIN Gideon Tasks has recorded can
+          apply to Tax Prep tasks.
         </p>
       ) : (
         <p>

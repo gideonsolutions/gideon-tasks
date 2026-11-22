@@ -135,7 +135,7 @@ describe("GET", () => {
   it("shows an admin the record and the year a PTIN can be recorded for", async () => {
     const res = await GET(get(), params());
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ...blank, current_year: 2026 });
+    expect(await res.json()).toEqual({ ...blank, current_year: 2026, recordable_years: [2026] });
   });
 
   it("is for admins only", async () => {
@@ -176,11 +176,50 @@ describe("recording a PTIN", () => {
     );
   });
 
-  it.each([2025, 2027])("refuses a PTIN for %i: only the current year (UTC) can be recorded", async (year) => {
-    const res = await POST(post({ ...recordPtin, year }), params());
+  it.each([2025, 2027])("refuses a PTIN for %i in November: only the current year (UTC)", async (year) => {
+    const res = await POST(post({ ...recordPtin, year, confirms_renewal_active_this_year: true }), params());
     expect(res.status).toBe(400);
     expect((await res.json()).error).toMatch(/current calendar year \(2026\)/);
     expect(audit.logAudit).not.toHaveBeenCalled();
+  });
+
+  describe("next year's PTIN, from December 1 (New York)", () => {
+    beforeEach(() => vi.setSystemTime(new Date("2026-12-01T00:30:00-05:00")));
+
+    it("offers both years", async () => {
+      expect((await (await GET(get(), params())).json()).recordable_years).toEqual([2026, 2027]);
+    });
+
+    it("records a renewal for next year, and audits it", async () => {
+      const res = await POST(post({ ...recordPtin, year: 2027, confirms_renewal_active_this_year: true }), params());
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ ptin: "P01234567", ptin_year: 2027 });
+      expect(audit.logAudit).toHaveBeenCalledWith(
+        ADMIN,
+        "admin.user.ptin_recorded",
+        "user",
+        USER,
+        expect.anything(),
+        expect.objectContaining({ ptin_year: 2027 }),
+      );
+    });
+
+    it("needs the confirmation that it is a renewal active this year", async () => {
+      const res = await POST(post({ ...recordPtin, year: 2027 }), params());
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toMatch(/renewal/);
+      expect(audit.logAudit).not.toHaveBeenCalled();
+    });
+
+    it("still records this year's without it", async () => {
+      expect((await POST(post(recordPtin), params())).status).toBe(200);
+    });
+
+    it("refuses two years ahead", async () => {
+      expect(
+        (await POST(post({ ...recordPtin, year: 2028, confirms_renewal_active_this_year: true }), params())).status,
+      ).toBe(400);
+    });
   });
 
   it("takes the year from the UTC clock", async () => {

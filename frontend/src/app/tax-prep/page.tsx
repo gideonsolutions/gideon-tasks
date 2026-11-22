@@ -149,8 +149,8 @@ export default function TaxPrepPage() {
               Every post is checked automatically when you publish it.
             </Step>
             <Step title="Choose a preparer.">
-              Only preparers whose PTIN Gideon Tasks has recorded for this
-              calendar year can apply, ask questions or be booked. An
+              Only preparers whose current PTIN Gideon Tasks has recorded can
+              apply, ask questions or be booked. An
               application shows &ldquo;PTIN on file for&rdquo; the year, and a
               badge for a credential we have recorded: Enrolled Agent, CPA or
               Attorney. Gideon Tasks does not check a preparer&apos;s work, so
@@ -224,7 +224,8 @@ export default function TaxPrepPage() {
               </a>
               . On Gideon Tasks, only a preparer whose PTIN we have recorded for
               the current calendar year can apply to, ask about, or be booked
-              for a Tax Prep task.
+              for a Tax Prep task. A PTIN we have recorded for next year counts
+              too.
             </Step>
             <Step title="Have it recorded.">
               Write to us through the{" "}
@@ -240,9 +241,15 @@ export default function TaxPrepPage() {
               and, for a CPA, with the state board of accountancy, then records
               your PTIN for this year. The directory lists only preparers with a
               credential or an Annual Filing Season Program record of
-              completion, so tell us if you aren&apos;t in it. Each January
-              your record lapses until you have renewed your PTIN and we have
-              recorded the new year.
+              completion, so tell us if you aren&apos;t in it.
+            </Step>
+            <Step title="Renew in time.">
+              The IRS opens PTIN renewal for the next year in mid-October. Once
+              you have renewed, write to us from December 1 and we can record
+              your PTIN for next year, so you aren&apos;t locked out on January
+              1. Otherwise your record lapses on January 1 until we record the
+              new year. A new PTIN for next year doesn&apos;t count until
+              January 1, because the IRS doesn&apos;t make it valid until then.
             </Step>
             <Step title="Badges.">
               Your applications and profile show &ldquo;PTIN on file for&rdquo;

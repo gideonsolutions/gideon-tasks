@@ -39,8 +39,10 @@ export function TaxPreparerControl() {
   const [loading, setLoading] = useState(false);
 
   const [ptin, setPtin] = useState("");
+  const [ptinYear, setPtinYear] = useState<number | null>(null);
   const [ptinNote, setPtinNote] = useState("");
   const [ptinConfirmed, setPtinConfirmed] = useState(false);
+  const [renewalConfirmed, setRenewalConfirmed] = useState(false);
 
   const [credential, setCredential] = useState<TaxCredential>("enrolled_agent");
   const [credentialNote, setCredentialNote] = useState("");
@@ -49,8 +51,10 @@ export function TaxPreparerControl() {
   function reset(next: TaxPreparerRecord | null) {
     setRecord(next);
     setPtin("");
+    setPtinYear(next?.current_year ?? null);
     setPtinNote("");
     setPtinConfirmed(false);
+    setRenewalConfirmed(false);
     setCredential(next?.tax_credential ?? "enrolled_agent");
     setCredentialNote("");
     setCredentialConfirmed(false);
@@ -82,7 +86,9 @@ export function TaxPreparerControl() {
   }
 
   const year = record?.current_year;
-  const ptinCurrent = !!record?.ptin && record.ptin_year === year;
+  const ptinCurrent = !!record?.ptin && record.ptin_year != null && record.ptin_year >= year!;
+  const recordYear = ptinYear ?? year;
+  const isNextYear = recordYear != null && year != null && recordYear > year;
 
   return (
     <Card>
@@ -90,12 +96,20 @@ export function TaxPreparerControl() {
         <CardTitle>Tax preparer: PTIN and credential</CardTitle>
         <div className="mt-1 space-y-2 text-sm text-gray-600">
           <p>
-            Only users with a PTIN recorded for the current calendar year can
-            apply to, ask about or be booked for Tax Prep tasks. PTINs expire
-            on December 31, so every record lapses on January 1 (UTC) until
-            you check it and record the new year. Clearing a PTIN stops new
-            applications and bookings; it does not cancel tasks the user is
-            already booked for.
+            Only users with a PTIN recorded for the current calendar year, or
+            next year, can apply to, ask about or be booked for Tax Prep tasks.
+            PTINs expire on December 31, and the IRS opens renewal for the next
+            year in mid-October. From December 1 (New York time) you can record
+            a renewed PTIN for next year, so the preparer isn&apos;t locked out
+            on January 1; a record for this year lapses then (UTC). Clearing a
+            PTIN stops new applications and bookings; it does not cancel tasks
+            the user is already booked for.
+          </p>
+          <p>
+            Record next year&apos;s PTIN early only for a renewal. A new PTIN
+            applied for late in the year covers either this year or next, and
+            one for next year isn&apos;t valid until January 1 (Form W-12
+            instructions, line 2): record that one in January.
           </p>
           <p>
             <strong className="text-gray-900">Before you record:</strong> look
@@ -170,12 +184,32 @@ export function TaxPreparerControl() {
               </div>
               <Input
                 id="ptin"
-                label={`PTIN for ${year} (P and eight digits)`}
+                label="PTIN (P and eight digits)"
                 value={ptin}
                 maxLength={9}
                 onChange={(e) => setPtin(e.target.value)}
                 placeholder="P12345678"
               />
+              {record.recordable_years.length > 1 ? (
+                <Select
+                  id="ptin_year"
+                  label="Year the PTIN is verified for"
+                  value={String(recordYear)}
+                  onChange={(e) => {
+                    setPtinYear(Number(e.target.value));
+                    setRenewalConfirmed(false);
+                  }}
+                  options={record.recordable_years.map((y) => ({
+                    value: String(y),
+                    label: y === year ? `${y} (this year)` : `${y} (next year, a renewal)`,
+                  }))}
+                />
+              ) : (
+                <p className="text-sm text-gray-700">
+                  Year: {year}. Next year&apos;s PTIN can be recorded from
+                  December 1.
+                </p>
+              )}
               <Textarea
                 id="ptin_note"
                 label={
@@ -195,29 +229,48 @@ export function TaxPreparerControl() {
                   onChange={(e) => setPtinConfirmed(e.target.checked)}
                 />
                 <span>
-                  I have confirmed that this PTIN is current for {year} and
+                  I have confirmed that this PTIN is current for {recordYear} and
                   belongs to this person.
                 </span>
               </label>
+              {isNextYear && (
+                <label className="flex items-start gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    className={checkbox}
+                    checked={renewalConfirmed}
+                    onChange={(e) => setRenewalConfirmed(e.target.checked)}
+                  />
+                  <span>
+                    This is a renewal: the same PTIN is also active for {year}.
+                  </span>
+                </label>
+              )}
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  disabled={!ptin.trim() || !ptinNote.trim() || !ptinConfirmed}
+                  disabled={
+                    !ptin.trim() ||
+                    !ptinNote.trim() ||
+                    !ptinConfirmed ||
+                    (isNextYear && !renewalConfirmed)
+                  }
                   loading={loading}
                   onClick={() =>
                     change(
                       {
                         action: "record_ptin",
                         ptin: ptin.trim(),
-                        year: year!,
+                        year: recordYear!,
                         note: ptinNote,
                         confirms_current_ptin: true,
+                        ...(isNextYear && { confirms_renewal_active_this_year: true as const }),
                       },
-                      `PTIN recorded for ${year}`,
+                      `PTIN recorded for ${recordYear}`,
                     )
                   }
                 >
-                  Record PTIN for {year}
+                  Record PTIN for {recordYear}
                 </Button>
                 {record.ptin && (
                   <Button

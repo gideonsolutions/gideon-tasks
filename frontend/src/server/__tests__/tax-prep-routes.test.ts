@@ -124,6 +124,13 @@ describe("POST /api/tasks/[id]/applications on a Tax Prep task", () => {
     expect(res.status).toBe(201);
   });
 
+  it("accepts next year's PTIN, recorded early in December", async () => {
+    vi.setSystemTime(new Date("2026-12-10T15:00:00Z"));
+    state.preparer = { ...currentPtin, ptin_year: 2027 };
+    const res = await apply(post(`/tasks/${TASK}/applications`, {}), taskParams);
+    expect(res.status).toBe(201);
+  });
+
   it("lapses on January 1 (UTC)", async () => {
     vi.setSystemTime(new Date("2027-01-01T00:00:01Z"));
     const res = await apply(post(`/tasks/${TASK}/applications`, {}), taskParams);

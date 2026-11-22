@@ -100,12 +100,22 @@ export interface TaxPreparerRecord {
   tax_credential_note: string | null;
   tax_credential_recorded_at: string | null;
   tax_credential_recorded_by: string | null;
-  /** The calendar year (UTC) a PTIN can be recorded for. */
+  /** The calendar year (UTC). */
   current_year: number;
+  /** The years a PTIN can be recorded for now: this year, and next year from December 1. */
+  recordable_years: number[];
 }
 
 export type TaxPreparerChange =
-  | { action: "record_ptin"; ptin: string; year: number; note: string; confirms_current_ptin: true }
+  | {
+      action: "record_ptin";
+      ptin: string;
+      year: number;
+      note: string;
+      confirms_current_ptin: true;
+      /** Required for next year's PTIN. */
+      confirms_renewal_active_this_year?: true;
+    }
   | { action: "clear_ptin"; note: string }
   | {
       action: "record_credential";

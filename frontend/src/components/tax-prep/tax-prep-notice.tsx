@@ -36,8 +36,8 @@ export function TaxPrepNotice({
         </li>
         {requirement === "ptin" ? (
           <li>
-            Only preparers whose PTIN Gideon Tasks has recorded for this
-            calendar year can apply, ask questions or be booked.
+            Only preparers whose current PTIN Gideon Tasks has recorded can
+            apply, ask questions or be booked.
           </li>
         ) : (
           <li>

@@ -12,8 +12,22 @@
 // says: "All PTINs expire on Dec. 31 of each year and are required to be
 // renewed to be current and active."
 //   https://www.irs.gov/tax-professionals/frequently-asked-questions-ptin-application-renewal-assistance
-// So a recorded PTIN carries the calendar year it was verified for, and only
-// a PTIN recorded for the current calendar year (UTC) qualifies.
+// So a recorded PTIN carries the calendar year it was verified for, and it
+// qualifies while that year is the current calendar year (UTC) or later.
+//
+// Next year's PTIN. The same IRS page: "PTIN renewal open season begins
+// mid-October each year for the following year." From December 1 (New York
+// time) an admin may record a renewed PTIN for next year, so a December
+// renewal doesn't lock anyone out on January 1, while a record for the
+// current year still lapses after December 31. A new PTIN applied for
+// late in the year covers one year, not two: "If you are applying for a new
+// PTIN after October 1, you must indicate whether you want your PTIN to be
+// valid for the current calendar year or the next calendar year. ... If you
+// select the next calendar year, your PTIN will not be valid until January 1
+// of the next calendar year." (Instructions for Form W-12, Rev. Oct. 2026,
+// line 2.) So next year's PTIN is recorded early only as a renewal of a PTIN
+// that is also active this year; the admin confirms that.
+//   https://www.irs.gov/pub/irs-pdf/iw12.pdf
 
 /** The Tax Prep category's slug (see seed.ts). */
 export const TAX_PREP_SLUG = "tax-prep";
@@ -88,12 +102,40 @@ export function preparerColumns(alias = ""): string {
   return `${alias}status, (${alias}ptin IS NOT NULL) AS has_ptin, ${alias}ptin_year, ${alias}tax_credential`;
 }
 
-/** Whether a PTIN is recorded for the current calendar year (UTC). */
+/**
+ * Whether a PTIN is recorded for the current calendar year (UTC) or later:
+ * a renewal recorded in December for next year counts now as well.
+ */
 export function hasCurrentPtin(
   u: Pick<PreparerState, "has_ptin" | "ptin_year"> | null | undefined,
   now: Date = new Date(),
 ): boolean {
-  return !!u && u.has_ptin && u.ptin_year != null && Number(u.ptin_year) === utcYear(now);
+  return !!u && u.has_ptin && u.ptin_year != null && Number(u.ptin_year) >= utcYear(now);
+}
+
+/** The year and month (1-12) in New York at this moment. */
+export function newYorkYearMonth(now: Date = new Date()): { year: number; month: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "numeric",
+  }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return { year: get("year"), month: get("month") };
+}
+
+/** The month (in New York) from which next year's PTIN may be recorded. */
+export const NEXT_YEAR_PTIN_FROM_MONTH = 12;
+
+/**
+ * The years an admin may record a PTIN for: the current calendar year (UTC)
+ * and, from December 1 in New York, next year as well.
+ */
+export function recordablePtinYears(now: Date = new Date()): number[] {
+  const years = [utcYear(now)];
+  const ny = newYorkYearMonth(now);
+  if (ny.month >= NEXT_YEAR_PTIN_FROM_MONTH && ny.year + 1 > years[0]) years.push(ny.year + 1);
+  return years;
 }
 
 /** What a category asks of the person who applies, asks, or is booked. */
@@ -122,7 +164,7 @@ export function meetsTaxRequirement(
 }
 
 export const PTIN_REQUIRED =
-  "Only preparers whose PTIN Gideon Tasks has recorded for this calendar year can apply to, ask about, or be booked for Tax Prep tasks. See /tax-prep";
+  "Only preparers whose current PTIN Gideon Tasks has recorded can apply to, ask about, or be booked for Tax Prep tasks. See /tax-prep";
 
 export const CREDENTIAL_REQUIRED =
   "Only enrolled agents, CPAs and attorneys whose credential Gideon Tasks has recorded can apply to, ask about, or be booked for IRS Notices & Representation tasks. See /tax-prep";
@@ -139,12 +181,12 @@ export function taxRequirementMessage(requirement: TaxRequirement): string {
 
 /**
  * What everyone may see about a user as a preparer: their credential and the
- * year their PTIN is on file for, if it is the current year. Never the PTIN.
+ * year their PTIN is on file for, while it is current. Never the PTIN.
  * Nothing for an account that isn't active.
  */
 export interface PreparerBadges {
   tax_credential: TaxCredential | null;
-  /** The current year, if a PTIN is recorded for it; otherwise null. */
+  /** The year the PTIN is recorded for, while current; otherwise null. */
   ptin_year: number | null;
 }
 
@@ -155,7 +197,7 @@ export function publicPreparerBadges(
   if (!u || u.status !== "active") return { tax_credential: null, ptin_year: null };
   return {
     tax_credential: isTaxCredential(u.tax_credential) ? u.tax_credential : null,
-    ptin_year: hasCurrentPtin(u, now) ? utcYear(now) : null,
+    ptin_year: hasCurrentPtin(u, now) ? Number(u.ptin_year) : null,
   };
 }
 

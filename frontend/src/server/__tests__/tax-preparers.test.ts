@@ -4,7 +4,9 @@ import {
   hasCurrentPtin,
   IRS_HELP_SLUG,
   meetsTaxRequirement,
+  newYorkYearMonth,
   normalizePtin,
+  recordablePtinYears,
   preparerBadgeLabels,
   publicPreparerBadges,
   PTIN_REQUIRED,
@@ -52,14 +54,43 @@ describe("hasCurrentPtin", () => {
     expect(hasCurrentPtin(current, new Date("2027-01-01T00:00:00Z"))).toBe(false);
   });
 
+  it("counts next year's PTIN, recorded early, from now on", () => {
+    expect(hasCurrentPtin({ has_ptin: true, ptin_year: 2027 }, new Date("2026-12-15T12:00:00Z"))).toBe(true);
+    expect(hasCurrentPtin({ has_ptin: true, ptin_year: 2027 }, new Date("2027-06-01T12:00:00Z"))).toBe(true);
+    expect(hasCurrentPtin({ has_ptin: true, ptin_year: 2027 }, new Date("2028-01-01T00:00:00Z"))).toBe(false);
+  });
+
   it.each([
     ["last year's PTIN", { has_ptin: true, ptin_year: 2025 }],
-    ["next year's PTIN", { has_ptin: true, ptin_year: 2027 }],
     ["no PTIN", { has_ptin: false, ptin_year: null }],
     ["a year without a PTIN", { has_ptin: false, ptin_year: 2026 }],
     ["no record", null],
   ])("is false for %s", (_label, u) => {
     expect(hasCurrentPtin(u, NOV_2026)).toBe(false);
+  });
+});
+
+describe("recordablePtinYears", () => {
+  it("is this year only, through November 30 in New York", () => {
+    expect(recordablePtinYears(NOV_2026)).toEqual([2026]);
+    // 11:59 pm on November 30 in New York is already December 1 in UTC.
+    expect(recordablePtinYears(new Date("2026-11-30T23:59:00-05:00"))).toEqual([2026]);
+  });
+
+  it("adds next year from December 1 in New York", () => {
+    expect(recordablePtinYears(new Date("2026-12-01T00:00:00-05:00"))).toEqual([2026, 2027]);
+    expect(recordablePtinYears(new Date("2026-12-31T12:00:00-05:00"))).toEqual([2026, 2027]);
+  });
+
+  it("is the new year only once the year has turned in UTC", () => {
+    // 8 pm on December 31 in New York: already 2027 in UTC.
+    expect(recordablePtinYears(new Date("2026-12-31T20:00:00-05:00"))).toEqual([2027]);
+    expect(recordablePtinYears(new Date("2027-01-15T12:00:00Z"))).toEqual([2027]);
+  });
+
+  it("reads the New York calendar", () => {
+    expect(newYorkYearMonth(new Date("2026-12-01T04:59:00Z"))).toEqual({ year: 2026, month: 11 });
+    expect(newYorkYearMonth(new Date("2026-12-01T05:00:00Z"))).toEqual({ year: 2026, month: 12 });
   });
 });
 
@@ -150,6 +181,11 @@ describe("publicPreparerBadges", () => {
     expect(badges).toEqual({ tax_credential: "enrolled_agent", ptin_year: 2026 });
     expect(JSON.stringify(badges)).not.toContain("P01234567");
     expect(preparerBadgeLabels(badges)).toEqual(["Enrolled Agent", "PTIN on file for 2026"]);
+  });
+
+  it("shows next year's PTIN as on file for next year", () => {
+    const badges = publicPreparerBadges({ ...current, ptin_year: 2027 }, new Date("2026-12-10T12:00:00Z"));
+    expect(preparerBadgeLabels(badges)).toEqual(["PTIN on file for 2027"]);
   });
 
   it("drops a lapsed PTIN but keeps the credential", () => {

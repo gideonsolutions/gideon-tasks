@@ -59,7 +59,7 @@ describe("finalizeAssignment", () => {
 
     const [sql, params] = db.queryOne.mock.calls[0];
     expect(sql).toContain("c.id = tasks.category_id AND c.slug = $4");
-    expect(sql).toContain("u.ptin IS NOT NULL AND u.ptin_year = $3");
+    expect(sql).toContain("u.ptin IS NOT NULL AND u.ptin_year >= $3");
     expect(sql).toMatch(/u\.id = \$1 AND u\.status = 'active'\s+AND u\.ptin IS NOT NULL/);
     expect(params[2]).toBe(2026);
     expect(params[3]).toBe("tax-prep");

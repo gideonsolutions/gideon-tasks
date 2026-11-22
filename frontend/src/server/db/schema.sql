@@ -287,8 +287,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS background_check_note TEXT;
 -- was verified for, and their credential, after checking the IRS Directory
 -- of Federal Tax Return Preparers with Credentials and Select Qualifications
 -- (and, for a CPA, the state board). No lookup is integrated. Only a user
--- with a PTIN recorded for the current calendar year (UTC) may apply to, ask
--- about, or be assigned a Tax Prep task (src/server/tax-preparers.ts):
+-- with a PTIN recorded for the current calendar year (UTC) or later (next
+-- year's may be recorded from December 1) may apply to, ask about, or be
+-- assigned a Tax Prep task (src/server/tax-preparers.ts):
 -- 26 CFR 1.6109-2(d) requires a PTIN of anyone paid to prepare all or
 -- substantially all of a return, and PTINs expire on December 31 each year.
 -- The PTIN and the notes are for admins; profiles show only the credential
