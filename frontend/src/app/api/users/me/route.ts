@@ -3,6 +3,7 @@ import { handle, notFound } from "@/server/errors";
 import { execute, queryOne } from "@/server/db";
 import { requireAuth } from "@/server/auth";
 import { ok, parseBody } from "@/server/route-helpers";
+import { userSelfView } from "@/server/user-self-view";
 
 export const runtime = "nodejs";
 
@@ -13,15 +14,10 @@ const UpdateSchema = z.object({
 });
 
 async function fetchUser(id: string) {
-  const u = await queryOne<
-    Record<string, unknown> & { password_hash: string; background_check_note: unknown }
-  >(`SELECT * FROM users WHERE id = $1`, [id]);
+  const u = await queryOne<Record<string, unknown>>(`SELECT * FROM users WHERE id = $1`, [id]);
   if (!u) throw notFound("User not found");
-  // The background-check note is for admins only.
-  const { password_hash: _omit, background_check_note: _note, ...rest } = u;
-  void _omit;
-  void _note;
-  return rest;
+  // The background-check note, the PTIN and the admins' notes are for admins only.
+  return userSelfView(u);
 }
 
 export async function GET(req: Request) {

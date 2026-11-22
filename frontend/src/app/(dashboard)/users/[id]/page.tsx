@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StarRating } from "@/components/ui/star-rating";
 import { Spinner } from "@/components/ui/spinner";
+import { PreparerBadges } from "@/components/users/preparer-badges";
 import { TRUST_LEVEL_NAMES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils/format";
 import * as usersApi from "@/lib/api/users";
@@ -59,6 +60,7 @@ export default function UserProfilePage({
             <span className="text-sm text-gray-500">Member since:</span>{" "}
             <span>{formatDate(profile.created_at)}</span>
           </div>
+          <PreparerBadges badges={profile} />
         </CardContent>
       </Card>
 

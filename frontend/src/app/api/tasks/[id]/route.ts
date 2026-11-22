@@ -45,10 +45,17 @@ interface TaskRow {
   status: string;
   deadline: string;
   for_minor: boolean;
+  /** The category's slug, so the task page can explain who may apply. */
+  category_slug: string | null;
 }
 
 async function fetchTask(id: string): Promise<TaskRow> {
-  const t = await queryOne<TaskRow>(`SELECT * FROM tasks WHERE id = $1`, [id]);
+  const t = await queryOne<TaskRow>(
+    `SELECT t.*, c.slug AS category_slug
+     FROM tasks t LEFT JOIN categories c ON c.id = t.category_id
+     WHERE t.id = $1`,
+    [id],
+  );
   if (!t) throw notFound("Task not found");
   return t;
 }

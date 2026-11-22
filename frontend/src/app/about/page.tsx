@@ -31,7 +31,11 @@ const faqs: QA[] = [
         <Link href="/tutoring" className="text-blue-600 hover:underline">
           tutoring
         </Link>
-        , tech help, tax prep, and more — and doers apply, complete the work,
+        , tech help,{" "}
+        <Link href="/tax-prep" className="text-blue-600 hover:underline">
+          tax prep
+        </Link>
+        , and more — and doers apply, complete the work,
         and get paid through escrow. Payments are in US dollars.
       </>
     ),
@@ -128,7 +132,11 @@ const faqs: QA[] = [
         <Link href="/tutoring" className="text-blue-600 hover:underline">
           tutoring
         </Link>
-        , computer help, event help, tax prep, and more. Content is auto-moderated when you publish — anything
+        , computer help, event help,{" "}
+        <Link href="/tax-prep" className="text-blue-600 hover:underline">
+          tax prep
+        </Link>
+        , and more. Content is auto-moderated when you publish — anything
         involving minors as task subjects, childcare, sexual content, weapons,
         illegal drugs, gambling, or trafficking is rejected. The one exception
         for minors is tutoring that a parent or guardian posts for their
@@ -139,6 +147,8 @@ const faqs: QA[] = [
         . Contact information
         (phone, email, URLs) is not permitted in task descriptions; doers and
         requesters communicate through the platform until they’re matched.
+        Social Security numbers and ITINs are rejected in every post and
+        message.
       </>
     ),
   },

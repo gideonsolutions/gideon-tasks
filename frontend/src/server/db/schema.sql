@@ -283,6 +283,31 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS for_minor BOOLEAN NOT NULL DEFAULT fa
 ALTER TABLE users ADD COLUMN IF NOT EXISTS background_check_cleared_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS background_check_note TEXT;
 
+-- Tax preparers. An admin records a tasker's PTIN for the calendar year it
+-- was verified for, and their credential, after checking the IRS Directory
+-- of Federal Tax Return Preparers with Credentials and Select Qualifications
+-- (and, for a CPA, the state board). No lookup is integrated. Only a user
+-- with a PTIN recorded for the current calendar year (UTC) may apply to, ask
+-- about, or be assigned a Tax Prep task (src/server/tax-preparers.ts):
+-- 26 CFR 1.6109-2(d) requires a PTIN of anyone paid to prepare all or
+-- substantially all of a return, and PTINs expire on December 31 each year.
+-- The PTIN and the notes are for admins; profiles show only the credential
+-- and "PTIN on file for <year>". Clearing sets the value and year to NULL
+-- and keeps the note saying why; audit_log has every change.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ptin TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ptin_year SMALLINT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ptin_note TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ptin_recorded_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ptin_recorded_by UUID REFERENCES users(id);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tax_credential TEXT
+    CHECK (tax_credential IN ('enrolled_agent', 'cpa', 'attorney'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tax_credential_note TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tax_credential_recorded_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tax_credential_recorded_by UUID REFERENCES users(id);
+
+-- One account per PTIN.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ptin ON users(ptin) WHERE ptin IS NOT NULL;
+
 -- Revoke UPDATE and DELETE on audit_log via a trigger (defense in depth)
 CREATE OR REPLACE FUNCTION prevent_audit_log_mutation() RETURNS TRIGGER AS $$
 BEGIN

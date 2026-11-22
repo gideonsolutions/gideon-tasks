@@ -8,6 +8,7 @@ import { TaskDetail } from "@/components/tasks/task-detail";
 import { TaskActions } from "@/components/tasks/task-actions";
 import { ApplyForm } from "@/components/applications/apply-form";
 import { BackgroundCheckRequired } from "@/components/applications/background-check-required";
+import { PreparerRequired } from "@/components/tax-prep/preparer-required";
 import { PayoutNotice } from "@/components/stripe/payout-notice";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -86,13 +87,15 @@ export default function TaskPage({
             <CardTitle>Apply for this task</CardTitle>
           </CardHeader>
           <CardContent>
-            {task.for_minor ? (
-              <BackgroundCheckRequired>
+            <PreparerRequired categorySlug={task.category_slug}>
+              {task.for_minor ? (
+                <BackgroundCheckRequired>
+                  <ApplyForm taskId={id} onSuccess={refetch} />
+                </BackgroundCheckRequired>
+              ) : (
                 <ApplyForm taskId={id} onSuccess={refetch} />
-              </BackgroundCheckRequired>
-            ) : (
-              <ApplyForm taskId={id} onSuccess={refetch} />
-            )}
+              )}
+            </PreparerRequired>
           </CardContent>
         </Card>
       )}

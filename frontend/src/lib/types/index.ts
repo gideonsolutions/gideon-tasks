@@ -1,5 +1,9 @@
 // All TypeScript interfaces matching backend Rust models
 
+import type { PreparerBadges, TaxCredential } from "@/server/tax-preparers";
+
+export type { PreparerBadges, TaxCredential };
+
 // ─── Enums ───────────────────────────────────────────────
 
 export type TaskStatus =
@@ -54,6 +58,12 @@ export interface User {
   id_verified_at: string | null;
   /** When an admin recorded a cleared background check; null if none. */
   background_check_cleared_at: string | null;
+  /** Whether an admin has recorded a PTIN (the PTIN itself is for admins). */
+  has_ptin: boolean;
+  /** The calendar year the recorded PTIN was verified for. */
+  ptin_year: number | null;
+  /** The credential an admin recorded, shown as a badge. */
+  tax_credential: TaxCredential | null;
   is_admin: boolean;
   created_at: string;
   updated_at: string;
@@ -74,7 +84,39 @@ export type BackgroundCheckChange =
   | { action: "record"; note: string; confirms_identity_and_adult: true }
   | { action: "clear"; note: string };
 
-export interface PublicUserProfile {
+/** What /admin/users shows and changes about a user as a tax preparer. */
+export interface TaxPreparerRecord {
+  id: string;
+  legal_first_name: string;
+  legal_last_name: string;
+  email: string;
+  status: UserStatus;
+  ptin: string | null;
+  ptin_year: number | null;
+  ptin_note: string | null;
+  ptin_recorded_at: string | null;
+  ptin_recorded_by: string | null;
+  tax_credential: TaxCredential | null;
+  tax_credential_note: string | null;
+  tax_credential_recorded_at: string | null;
+  tax_credential_recorded_by: string | null;
+  /** The calendar year (UTC) a PTIN can be recorded for. */
+  current_year: number;
+}
+
+export type TaxPreparerChange =
+  | { action: "record_ptin"; ptin: string; year: number; note: string; confirms_current_ptin: true }
+  | { action: "clear_ptin"; note: string }
+  | {
+      action: "record_credential";
+      credential: TaxCredential;
+      note: string;
+      confirms_credential: true;
+    }
+  | { action: "clear_credential"; note: string };
+
+/** A public profile, with the credential and current-year PTIN badges (never the PTIN). */
+export interface PublicUserProfile extends PreparerBadges {
   id: string;
   legal_first_name: string;
   trust_level: number;
@@ -102,6 +144,8 @@ export interface Task {
   rejection_reason: string | null;
   /** Tutoring a parent or legal guardian posted for their child under 18. */
   for_minor: boolean;
+  /** The category's slug (on a single task from GET /tasks/[id]). */
+  category_slug?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -176,6 +220,8 @@ export interface TaskApplication {
   message: string | null;
   status: string;
   created_at: string;
+  /** The applicant's credential and current-year PTIN badges (in the requester's list). */
+  doer_badges?: PreparerBadges;
 }
 
 export interface CreateApplicationRequest {

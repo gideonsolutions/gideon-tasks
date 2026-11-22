@@ -22,6 +22,8 @@ import { requireVerifiedEmail } from "@/server/email-verification";
 import { logAudit } from "@/server/audit";
 import { ok, parseBody } from "@/server/route-helpers";
 import { requireBackgroundCheck } from "@/server/minor-safeguards";
+import { requireTaxQualification } from "@/server/tax-prep-gate";
+import { publicPreparerBadges } from "@/server/tax-preparers";
 
 export const runtime = "nodejs";
 
@@ -59,6 +61,7 @@ export async function POST(
     if (!canApplyForTasks(auth.trustLevel, emailVerified))
       throw trustLevelInsufficient("Cannot apply for tasks at this trust level");
     if (task.for_minor) await requireBackgroundCheck(auth.userId);
+    await requireTaxQualification(auth.userId, task.category_slug);
 
     const maxConc = maxConcurrentDoer(auth.trustLevel);
     const active = await queryOne<{ count: number }>(
@@ -125,10 +128,33 @@ export async function GET(
     if (!task) throw notFound("Task not found");
     if (task.requester_id !== auth.userId) throw forbidden("Not your task");
 
-    const rows = await query(
-      `SELECT * FROM task_applications WHERE task_id = $1 ORDER BY created_at ASC`,
+    const rows = await query<
+      Record<string, unknown> & {
+        doer_status: string;
+        doer_has_ptin: boolean;
+        doer_ptin_year: number | null;
+        doer_tax_credential: string | null;
+      }
+    >(
+      `SELECT a.*, u.status AS doer_status, (u.ptin IS NOT NULL) AS doer_has_ptin,
+              u.ptin_year AS doer_ptin_year, u.tax_credential AS doer_tax_credential
+       FROM task_applications a JOIN users u ON u.id = a.doer_id
+       WHERE a.task_id = $1 ORDER BY a.created_at ASC`,
       [id],
     );
-    return ok(rows);
+    // Each applicant's credential and current-year PTIN badge; never the PTIN.
+    return ok(
+      rows.map(
+        ({ doer_status, doer_has_ptin, doer_ptin_year, doer_tax_credential, ...app }) => ({
+          ...app,
+          doer_badges: publicPreparerBadges({
+            status: doer_status,
+            has_ptin: doer_has_ptin,
+            ptin_year: doer_ptin_year,
+            tax_credential: doer_tax_credential,
+          }),
+        }),
+      ),
+    );
   });
 }

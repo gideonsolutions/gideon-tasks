@@ -27,7 +27,9 @@ The app is a single Next.js project. Frontend pages live under `frontend/src/app
 
 **Trust system** — Four levels (0–3) computed from completed tasks, dispute history, account age, review scores, and (for level 1 only) a confirmed attestation. Level 3 requires admin sign-off. Every level, including level 0, can post and apply once the account's email is verified; level 0 is limited to tasks paying up to $100 and 2 active posted tasks.
 
-**Content moderation** — Regex-based pipeline auto-approves, flags, or rejects task and message content.
+**Content moderation** — Regex-based pipeline auto-approves, flags, or rejects task and message content. Social Security numbers and ITINs are rejected in every post, application, question, answer, message and review.
+
+**Tax Prep** — Only a tasker whose PTIN an admin has recorded for the current calendar year (UTC) can apply to, ask about, or be assigned a Tax Prep task (26 CFR 1.6109-2(d); PTINs expire on December 31). Admins record the PTIN and any credential (Enrolled Agent, CPA or attorney) on /admin/users after checking the IRS preparer directory; profiles and applications show the credential and "PTIN on file for <year>", never the PTIN. The rules are `frontend/src/server/tax-preparers.ts`; `/tax-prep` explains them.
 
 **Audit log** — Append-only log of all financial and state-changing actions, protected by a database trigger that prevents UPDATE and DELETE.
 
