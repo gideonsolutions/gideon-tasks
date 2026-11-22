@@ -370,10 +370,9 @@ export default function TaxPrepPage() {
               <a href={PUB_4557_URL} className={link}>
                 Publication 4557, Safeguarding Taxpayer Data
               </a>
-              . These duties are yours. Gideon Tasks keeps task files private
-              to you and the filer and deletes them on schedule, but that
-              doesn&apos;t meet them for you: whatever you download is yours to
-              protect.
+              . These duties are yours.
+              {documents &&
+                " Gideon Tasks keeps task files private to you and the filer and deletes them on schedule, but that doesn't meet them for you: whatever you download is yours to protect."}
             </Step>
             <Step title="Get paid.">
               Before you can start a booked task, set up payouts with Stripe on
