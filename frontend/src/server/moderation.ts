@@ -14,6 +14,14 @@ export interface ModerationContext {
   categorySlug?: string | null;
   /** The poster ticked "This is for my child under 18; I'm their parent or legal guardian". */
   forMinor?: boolean;
+  /**
+   * A Gideon Clerk booking description. Clerk is Gideon Solutions' own
+   * paperwork service, done with the adult account holder and never a task,
+   * so the two child rules (which keep childcare work and work on children
+   * out of the task marketplace) don't apply: "help me apply for child care
+   * assistance for my kids" is ordinary paperwork there. Every other rule does.
+   */
+  clerkBooking?: boolean;
 }
 
 /** A Tutoring task that a parent or guardian posted for their child. */
@@ -98,7 +106,8 @@ export function moderateContent(
   text: string,
   context?: ModerationContext,
 ): ModerationResult {
-  for (const p of CHILDCARE_PATTERNS) {
+  const clerk = context?.clerkBooking === true;
+  for (const p of clerk ? [] : CHILDCARE_PATTERNS) {
     if (p.test(text))
       return {
         kind: "rejected",
@@ -106,7 +115,7 @@ export function moderateContent(
           "Childcare is not allowed: no babysitting, nanny work, daycare, or looking after children",
       };
   }
-  if (!isGuardianTutoring(context)) {
+  if (!clerk && !isGuardianTutoring(context)) {
     for (const p of MINOR_SUBJECT_PATTERNS) {
       if (p.test(text))
         return {

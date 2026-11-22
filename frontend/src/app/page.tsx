@@ -7,6 +7,7 @@ import { TaskList } from "@/components/tasks/task-list";
 import { TaskFilters } from "@/components/tasks/task-filters";
 import { VolumeProgress } from "@/components/marketing/volume-progress";
 import { HomeHero } from "@/components/marketing/home-hero";
+import { ClerkNote } from "@/components/marketing/clerk-note";
 import { Spinner } from "@/components/ui/spinner";
 import { useApi } from "@/lib/hooks/use-api";
 import * as tasksApi from "@/lib/api/tasks";
@@ -54,6 +55,7 @@ export default function HomePage() {
           )}
         </section>
         <VolumeProgress />
+        <ClerkNote />
       </main>
       <Footer />
     </div>
