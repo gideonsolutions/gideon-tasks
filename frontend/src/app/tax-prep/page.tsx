@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import {
   CONTACT_URL,
+  IRS_HELP_SLUG,
   IRS_PREPARER_DIRECTORY_URL,
   maxActivePosted,
   maxConcurrentDoer,
@@ -14,11 +15,13 @@ import { formatCents } from "@/lib/utils/format";
 export const metadata = {
   title: "Tax Prep — Gideon Tasks",
   description:
-    "How tax prep works on Gideon Tasks: post the returns you need prepared, book a preparer whose current PTIN we have recorded, and pay through escrow. For filers and for preparers.",
+    "How tax prep works on Gideon Tasks: post the returns you need prepared, book a preparer whose current PTIN we have recorded, and pay through escrow. Help with IRS notices from enrolled agents, CPAs and attorneys. For filers and for preparers.",
 };
 
 /** The new-task form with the Tax Prep category already selected. */
 const POST_TAX_PREP = `/tasks/new?category=${TAX_PREP_SLUG}`;
+/** The new-task form with IRS Notices & Representation selected. */
+const POST_IRS_HELP = `/tasks/new?category=${IRS_HELP_SLUG}`;
 
 // A new account (trust level 0) has these limits; they rise with the level.
 const NEW_MAX_VALUE = formatCents(maxTaskValueCents(0)).replace(/\.00$/, "");
@@ -37,6 +40,13 @@ const PTIN_URL = "https://www.irs.gov/tax-professionals/ptin-requirements-for-ta
 const SECTION_7216_CONSENT_URL = "https://www.ecfr.gov/current/title-26/section-301.7216-3";
 /** IRS Free File. */
 const IRS_FREE_FILE_URL = "https://www.irs.gov/freefile";
+/** 31 CFR 10.3 (Circular 230): who may practice before the IRS. */
+const CIRCULAR_230_URL = "https://www.ecfr.gov/current/title-31/section-10.3";
+/** "Enrolled agents, certified public accountants, and attorneys have unlimited representation rights before the IRS." */
+const IRS_CREDENTIALS_URL =
+  "https://www.irs.gov/tax-professionals/understanding-tax-return-preparer-credentials-and-qualifications";
+/** "Use Form 2848 to authorize an individual to represent you before the IRS." */
+const FORM_2848_URL = "https://www.irs.gov/forms-pubs/about-form-2848";
 /** Reporting a paid preparer to the IRS (Form 14157). */
 const IRS_PREPARER_MISCONDUCT_URL =
   "https://www.irs.gov/help/report-fraud/tax-return-preparer-misconduct";
@@ -64,7 +74,12 @@ export default function TaxPrepPage() {
             prepared, with a price and a deadline. Preparers whose PTIN Gideon
             Tasks has recorded for this year apply, you book one, and the
             payment is held until you approve the work. Gideon Tasks does not
-            prepare returns or check a preparer&apos;s work.
+            prepare returns or check a preparer&apos;s work. For help with a
+            notice from the IRS, see{" "}
+            <a href="#irs-help" className={link}>
+              IRS Notices &amp; Representation
+            </a>
+            .
           </p>
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
             <Link
@@ -255,6 +270,46 @@ export default function TaxPrepPage() {
               .
             </Step>
           </ol>
+        </section>
+
+        <section
+          id="irs-help"
+          className="rounded-lg border border-gray-200 bg-white p-5 space-y-3"
+        >
+          <h2 className="text-xl font-bold text-gray-900">IRS Notices &amp; Representation</h2>
+          <p className="text-gray-700">
+            For help with a notice or letter from the IRS, or for someone to
+            deal with the IRS for you, such as in an audit, a payment or
+            collection matter, or an appeal,{" "}
+            <Link href={POST_IRS_HELP} className={link}>
+              post in IRS Notices &amp; Representation
+            </Link>
+            . It works like a Tax Prep task: say what the IRS sent and which
+            tax years it is about, without any of the numbers on it, and keep
+            the notice itself out of the task and its messages.
+          </p>
+          <p className="text-gray-700">
+            Only enrolled agents, CPAs and attorneys can take these tasks, once
+            Gideon Tasks has recorded their credential and their PTIN for this
+            calendar year. They are the only ones{" "}
+            <a href={CIRCULAR_230_URL} className={link}>
+              Circular 230 (31 CFR 10.3)
+            </a>{" "}
+            lets practice before the IRS without limit; the IRS calls these{" "}
+            <a href={IRS_CREDENTIALS_URL} className={link}>
+              unlimited representation rights
+            </a>
+            . Preparers: have your credential recorded along with your PTIN, as
+            described above.
+          </p>
+          <p className="text-gray-700">
+            To deal with the IRS for you, a representative needs your signed
+            authorization on{" "}
+            <a href={FORM_2848_URL} className={link}>
+              Form 2848
+            </a>
+            . Bring the notice to an in-person session at a public place.
+          </p>
         </section>
 
         <section className="rounded-lg border border-gray-200 bg-white p-5 space-y-3">

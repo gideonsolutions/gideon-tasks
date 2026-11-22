@@ -104,6 +104,7 @@ export const GUARDIAN_TICK_LABEL =
 /** Tax preparers: the Tax Prep slug, credentials and the PTIN rule. */
 export {
   TAX_PREP_SLUG,
+  IRS_HELP_SLUG,
   TAX_CREDENTIALS,
   TAX_CREDENTIAL_LABELS,
   taxRequirement,

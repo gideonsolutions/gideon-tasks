@@ -55,7 +55,7 @@ import { POST as apply } from "@/app/api/tasks/[id]/applications/route";
 import { POST as ask } from "@/app/api/tasks/[id]/questions/route";
 import { POST as assign } from "@/app/api/tasks/[id]/assign/[applicationId]/route";
 import { POST as createTask } from "@/app/api/tasks/route";
-import { PTIN_REQUIRED } from "../tax-preparers";
+import { CREDENTIAL_REQUIRED, PTIN_REQUIRED } from "../tax-preparers";
 import { SSN_REJECTION_REASON } from "../moderation";
 
 function post(path: string, body: unknown = {}) {
@@ -212,5 +212,50 @@ describe("POST /api/tasks with an SSN", () => {
     expect(await res.json()).toEqual({ error: SSN_REJECTION_REASON });
     expect(db.execute).not.toHaveBeenCalled();
     expect(db.queryOne).not.toHaveBeenCalled();
+  });
+});
+
+describe("IRS Notices & Representation: the credential gate on each route", () => {
+  const ptinOnly = currentPtin;
+  const enrolledAgent = { ...currentPtin, tax_credential: "enrolled_agent" };
+
+  beforeEach(() => {
+    state.task = { ...state.task, category_slug: "irs-help" };
+  });
+
+  it("lets an enrolled agent with a current PTIN apply, ask and be assigned", async () => {
+    state.preparer = enrolledAgent;
+    expect((await apply(post(`/tasks/${TASK}/applications`, {}), taskParams)).status).toBe(201);
+    expect(
+      (await ask(post(`/tasks/${TASK}/questions`, { question_body: "Which notice is it?" }), taskParams))
+        .status,
+    ).toBe(201);
+    state.actor = REQUESTER;
+    expect((await assign(post(`/tasks/${TASK}/assign/${APP}`), assignParams)).status).toBe(200);
+    expect(payments.authorizeEscrowPayment).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a preparer with a PTIN but no credential everywhere, before any card is authorized", async () => {
+    state.preparer = ptinOnly;
+    for (const res of [
+      await apply(post(`/tasks/${TASK}/applications`, {}), taskParams),
+      await ask(post(`/tasks/${TASK}/questions`, { question_body: "Which notice is it?" }), taskParams),
+    ]) {
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: CREDENTIAL_REQUIRED });
+    }
+    state.actor = REQUESTER;
+    const res = await assign(post(`/tasks/${TASK}/assign/${APP}`), assignParams);
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: CREDENTIAL_REQUIRED });
+    expect(payments.authorizeEscrowPayment).not.toHaveBeenCalled();
+    expect(inserts()).toHaveLength(0);
+  });
+
+  it("refuses an enrolled agent whose PTIN is from last year", async () => {
+    state.preparer = { ...enrolledAgent, ptin_year: 2025 };
+    const res = await apply(post(`/tasks/${TASK}/applications`, {}), taskParams);
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: CREDENTIAL_REQUIRED });
   });
 });

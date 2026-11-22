@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  CREDENTIAL_REQUIRED,
   hasCurrentPtin,
+  IRS_HELP_SLUG,
   meetsTaxRequirement,
   normalizePtin,
   preparerBadgeLabels,
@@ -101,6 +103,42 @@ describe("taxRequirement and meetsTaxRequirement", () => {
   it("says why", () => {
     expect(taxRequirementMessage("ptin")).toBe(PTIN_REQUIRED);
     expect(PTIN_REQUIRED).toMatch(/\/tax-prep/);
+  });
+});
+
+describe("the IRS Notices & Representation credential gate", () => {
+  it("asks for a PTIN and a credential", () => {
+    expect(taxRequirement(IRS_HELP_SLUG)).toBe("ptin_and_credential");
+    expect(taxRequirementMessage("ptin_and_credential")).toBe(CREDENTIAL_REQUIRED);
+  });
+
+  it.each(["enrolled_agent", "cpa", "attorney"])("lets in a(n) %s with a current PTIN", (tax_credential) => {
+    expect(meetsTaxRequirement("ptin_and_credential", { ...current, tax_credential }, NOV_2026)).toBe(true);
+  });
+
+  it("keeps out a preparer with a PTIN but no credential", () => {
+    expect(meetsTaxRequirement("ptin_and_credential", current, NOV_2026)).toBe(false);
+    // They can still take Tax Prep.
+    expect(meetsTaxRequirement("ptin", current, NOV_2026)).toBe(true);
+  });
+
+  it("keeps out a credential without a current PTIN", () => {
+    const ea = { ...current, tax_credential: "enrolled_agent" };
+    expect(meetsTaxRequirement("ptin_and_credential", { ...ea, ptin_year: 2025 }, NOV_2026)).toBe(false);
+    expect(meetsTaxRequirement("ptin_and_credential", { ...ea, has_ptin: false }, NOV_2026)).toBe(false);
+  });
+
+  it("keeps out an unknown credential and an account that isn't active", () => {
+    expect(
+      meetsTaxRequirement("ptin_and_credential", { ...current, tax_credential: "enrolled_actuary" }, NOV_2026),
+    ).toBe(false);
+    expect(
+      meetsTaxRequirement(
+        "ptin_and_credential",
+        { ...current, tax_credential: "cpa", status: "suspended" },
+        NOV_2026,
+      ),
+    ).toBe(false);
   });
 });
 

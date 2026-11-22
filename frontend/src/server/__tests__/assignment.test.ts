@@ -29,7 +29,7 @@ describe("finalizeAssignment", () => {
 
     const [sql, params] = db.queryOne.mock.calls[0];
     expect(sql).toContain("status = 'published'");
-    expect(params).toEqual([args.doerId, args.taskId, 2026, "tax-prep"]);
+    expect(params).toEqual([args.doerId, args.taskId, 2026, "tax-prep", "irs-help"]);
     expect(db.execute).toHaveBeenCalledTimes(2);
     expect(audit.logAudit).toHaveBeenCalledWith(
       args.actorId,
@@ -63,6 +63,19 @@ describe("finalizeAssignment", () => {
     expect(sql).toMatch(/u\.id = \$1 AND u\.status = 'active'\s+AND u\.ptin IS NOT NULL/);
     expect(params[2]).toBe(2026);
     expect(params[3]).toBe("tax-prep");
+  });
+
+  it("only assigns an IRS Notices & Representation task to a doer with a current PTIN and a credential", async () => {
+    db.queryOne.mockResolvedValue({ id: args.taskId });
+
+    await finalizeAssignment(args);
+
+    const [sql, params] = db.queryOne.mock.calls[0];
+    expect(sql).toContain("c.id = tasks.category_id AND c.slug = $5");
+    expect(sql).toMatch(
+      /u\.ptin IS NOT NULL AND u\.ptin_year = \$3\s+AND u\.tax_credential IS NOT NULL/,
+    );
+    expect(params[4]).toBe("irs-help");
   });
 
   it("uses the new year from January 1 UTC, so last year's PTIN no longer qualifies", async () => {

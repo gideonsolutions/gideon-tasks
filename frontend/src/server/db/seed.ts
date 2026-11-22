@@ -24,6 +24,9 @@ function generateCode(): string {
 
 const CATEGORIES: { name: string; slug: string; sortOrder: number }[] = [
   { name: "Tax Prep", slug: "tax-prep", sortOrder: 0 },
+  // Only enrolled agents, CPAs and attorneys with a current PTIN can take
+  // these (src/server/tax-preparers.ts).
+  { name: "IRS Notices & Representation", slug: "irs-help", sortOrder: 1 },
   { name: "Cleaning", slug: "cleaning", sortOrder: 100 },
   { name: "Handyman", slug: "handyman", sortOrder: 100 },
   { name: "Moving & Hauling", slug: "moving", sortOrder: 100 },

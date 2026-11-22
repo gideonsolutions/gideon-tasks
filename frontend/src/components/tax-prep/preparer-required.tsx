@@ -7,9 +7,10 @@ import { CONTACT_URL, meetsTaxRequirement, taxRequirement } from "@/lib/constant
 
 /**
  * On a Tax Prep task, shows its children (the apply form) only to a preparer
- * whose PTIN Gideon Tasks has recorded for this calendar year; everyone else
- * sees how to get it recorded. On other tasks it shows the children. The API
- * enforces the rule; this only explains it.
+ * whose PTIN Gideon Tasks has recorded for this calendar year, and on an IRS
+ * Notices & Representation task only to one who also has a recorded
+ * credential; everyone else sees how to get them recorded. On other tasks it
+ * shows the children. The API enforces the rule; this only explains it.
  */
 export function PreparerRequired({
   categorySlug,
@@ -33,10 +34,18 @@ export function PreparerRequired({
 
   return (
     <div className="space-y-2 text-sm text-gray-700">
-      <p>
-        Only preparers whose PTIN Gideon Tasks has recorded for this calendar
-        year can apply to Tax Prep tasks.
-      </p>
+      {requirement === "ptin" ? (
+        <p>
+          Only preparers whose PTIN Gideon Tasks has recorded for this
+          calendar year can apply to Tax Prep tasks.
+        </p>
+      ) : (
+        <p>
+          Only enrolled agents, CPAs and attorneys whose credential and PTIN
+          for this calendar year Gideon Tasks has recorded can apply to IRS
+          Notices &amp; Representation tasks.
+        </p>
+      )}
       <p>
         To have yours recorded,{" "}
         <a href={CONTACT_URL} className="text-blue-600 hover:underline">

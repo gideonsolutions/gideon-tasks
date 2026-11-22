@@ -1,7 +1,7 @@
 import "server-only";
 import { execute, queryOne } from "./db";
 import { logAudit } from "./audit";
-import { TAX_PREP_SLUG, utcYear } from "./tax-preparers";
+import { IRS_HELP_SLUG, TAX_PREP_SLUG, utcYear } from "./tax-preparers";
 
 /**
  * Marks a task assigned once its escrow hold is authorized. Shared by the
@@ -14,7 +14,9 @@ import { TAX_PREP_SLUG, utcYear } from "./tax-preparers";
  * background check is recorded; the assign route checks this first, and the
  * condition here also covers the webhook path. In the same way, a Tax Prep
  * task is only assigned to an active doer whose PTIN is recorded for the
- * current calendar year (UTC; src/server/tax-preparers.ts).
+ * current calendar year (UTC; src/server/tax-preparers.ts), and an IRS
+ * Notices & Representation task only to one who also has a recorded
+ * credential (Enrolled Agent, CPA or attorney).
  *
  * Returns true if this call assigned the task.
  */
@@ -37,8 +39,15 @@ export async function finalizeAssignment(a: {
          SELECT 1 FROM users u
          WHERE u.id = $1 AND u.status = 'active'
            AND u.ptin IS NOT NULL AND u.ptin_year = $3))
+       AND (NOT EXISTS (
+         SELECT 1 FROM categories c WHERE c.id = tasks.category_id AND c.slug = $5)
+         OR EXISTS (
+         SELECT 1 FROM users u
+         WHERE u.id = $1 AND u.status = 'active'
+           AND u.ptin IS NOT NULL AND u.ptin_year = $3
+           AND u.tax_credential IS NOT NULL))
      RETURNING id`,
-    [a.doerId, a.taskId, utcYear(), TAX_PREP_SLUG],
+    [a.doerId, a.taskId, utcYear(), TAX_PREP_SLUG, IRS_HELP_SLUG],
   );
   if (!updated) return false;
 

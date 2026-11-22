@@ -1,4 +1,5 @@
--- Gideon Tasks: tax preparers (the PTIN rule and credential badges).
+-- Gideon Tasks: tax preparers (the PTIN rule and credential badges), and the
+-- IRS Notices & Representation category.
 --
 -- Apply to the production database and to the preview database before the
 -- code that uses these columns is deployed, and after
@@ -30,5 +31,13 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS tax_credential_recorded_by UUID REFER
 
 -- One account per PTIN.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ptin ON users(ptin) WHERE ptin IS NOT NULL;
+
+-- The IRS Notices & Representation category, next to Tax Prep. Only enrolled
+-- agents, CPAs and attorneys with a current PTIN can take its tasks. The id
+-- is a fixed UUIDv7; categories.slug is UNIQUE, so a second run (or a
+-- database where seed.ts already added it) inserts nothing.
+INSERT INTO categories (id, name, slug, parent_id, is_active, sort_order)
+VALUES ('01a20182-7141-719a-a583-5efffb1917b5', 'IRS Notices & Representation', 'irs-help', NULL, true, 1)
+ON CONFLICT (slug) DO NOTHING;
 
 COMMIT;
