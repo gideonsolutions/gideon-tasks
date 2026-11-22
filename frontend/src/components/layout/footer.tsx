@@ -11,6 +11,9 @@ export function Footer() {
           <Link href="/fees" className="hover:text-gray-700">
             Fees
           </Link>
+          <Link href="/safeguarding" className="hover:text-gray-700">
+            Safeguarding
+          </Link>
           <a
             href="https://github.com/gideonsolutions/gideon-tasks/blob/main/LICENSE.md"
             className="hover:text-gray-700"

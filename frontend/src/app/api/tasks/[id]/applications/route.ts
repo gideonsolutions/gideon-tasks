@@ -21,6 +21,7 @@ import { platformVolumeCents } from "@/server/platform-volume";
 import { requireVerifiedEmail } from "@/server/email-verification";
 import { logAudit } from "@/server/audit";
 import { ok, parseBody } from "@/server/route-helpers";
+import { requireBackgroundCheck } from "@/server/minor-safeguards";
 
 export const runtime = "nodejs";
 
@@ -40,8 +41,13 @@ export async function POST(
       status: string;
       price_cents: number;
       pricing_mode: "doer_receives" | "requester_pays";
+      for_minor: boolean;
+      category_slug: string | null;
     }>(
-      `SELECT requester_id, status, price_cents, pricing_mode FROM tasks WHERE id = $1`,
+      `SELECT t.requester_id, t.status, t.price_cents, t.pricing_mode, t.for_minor,
+              c.slug AS category_slug
+       FROM tasks t LEFT JOIN categories c ON c.id = t.category_id
+       WHERE t.id = $1`,
       [id],
     );
     if (!task) throw notFound("Task not found");
@@ -52,6 +58,7 @@ export async function POST(
     const emailVerified = await requireVerifiedEmail(auth.userId, "apply");
     if (!canApplyForTasks(auth.trustLevel, emailVerified))
       throw trustLevelInsufficient("Cannot apply for tasks at this trust level");
+    if (task.for_minor) await requireBackgroundCheck(auth.userId);
 
     const maxConc = maxConcurrentDoer(auth.trustLevel);
     const active = await queryOne<{ count: number }>(
@@ -79,7 +86,10 @@ export async function POST(
     if (dup.length > 0) throw conflict("Already applied to this task");
 
     if (body.message) {
-      const m = moderateContent(body.message);
+      const m = moderateContent(body.message, {
+        categorySlug: task.category_slug,
+        forMinor: task.for_minor,
+      });
       if (m.kind === "rejected") throw contentRejected(m.reason);
     }
 

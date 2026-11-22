@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import {
   CONTACT_URL,
+  GUARDIAN_TICK_LABEL,
   maxActivePosted,
   maxConcurrentDoer,
   maxTaskValueCents,
@@ -213,7 +214,12 @@ export default function TutoringPage() {
               <a href={CONTACT_URL} className={link}>
                 Gideon Solutions contact page
               </a>
-              . If someone is in immediate danger, call 911.
+              . If someone is in immediate danger, call 911. For concerns about
+              a child, see{" "}
+              <Link href="/safeguarding#report" className={link}>
+                reporting a concern
+              </Link>
+              .
             </li>
           </ul>
         </section>
@@ -221,8 +227,29 @@ export default function TutoringPage() {
         <section className="rounded-lg border border-amber-200 bg-amber-50 p-5 space-y-3">
           <h2 className="text-xl font-bold text-gray-900">Under 18s</h2>
           <p className="text-gray-800">
-            Tutoring for anyone under 18 is not available on Gideon Tasks yet,
-            so do not post or book tutoring for a child.
+            A child under 18 does not get an account. Their parent or legal
+            guardian posts the Tutoring task and ticks &ldquo;
+            {GUARDIAN_TICK_LABEL}&rdquo;. For those tasks:
+          </p>
+          <ul className="list-disc pl-5 space-y-1 text-gray-800">
+            <li>
+              Only tutors whose background check Gideon Tasks has recorded can
+              apply or be booked. A background check is not a guarantee.
+            </li>
+            <li>
+              Sessions are online, or in person at a public place the parent or
+              guardian confirms.
+            </li>
+            <li>A parent or guardian is present or reachable during every session.</li>
+            <li>No contact with the child off Gideon Tasks.</li>
+          </ul>
+          <p className="text-gray-800">
+            Read the{" "}
+            <Link href="/safeguarding" className={link}>
+              safeguarding policy
+            </Link>{" "}
+            before you post or apply. Tutors can&apos;t request a background
+            check on the site yet; it explains how to ask about one.
           </p>
         </section>
       </main>

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { moderateContent, stripContactInfo } from "../moderation";
+import {
+  isGuardianTutoring,
+  moderateContent,
+  stripContactInfo,
+} from "../moderation";
 
 describe("moderateContent — auto-reject", () => {
   it.each([
@@ -99,5 +103,92 @@ describe("stripContactInfo", () => {
   it("preserves clean text", () => {
     const input = "I need help moving furniture on Saturday";
     expect(stripContactInfo(input)).toBe(input);
+  });
+});
+
+// ─── Tutoring for a child (tasks.for_minor) ──────────────
+
+const guardianTutoring = { categorySlug: "tutoring", forMinor: true };
+
+describe("isGuardianTutoring", () => {
+  it("is true only for a ticked Tutoring task", () => {
+    expect(isGuardianTutoring(guardianTutoring)).toBe(true);
+    expect(isGuardianTutoring({ categorySlug: "tutoring", forMinor: false })).toBe(false);
+    expect(isGuardianTutoring({ categorySlug: "other", forMinor: true })).toBe(false);
+    expect(isGuardianTutoring(undefined)).toBe(false);
+  });
+});
+
+describe("moderateContent — a guardian's tutoring post", () => {
+  it.each([
+    "My child needs a math tutor for 6th grade fractions, online twice a week",
+    "Tutor needed for my kid: reading practice, about an hour per session",
+    "Looking for a patient tutor for my children, algebra and geometry",
+    "My kids need help with Spanish homework. A tutor who can explain verbs",
+  ])("allows tutoring that mentions the child: %s", (text) => {
+    expect(moderateContent(text, guardianTutoring).kind).toBe("clean");
+  });
+
+  it.each([
+    "My kid wants a career in engineering and needs a careful physics tutor",
+    "I'll sit in on the sessions; my child is shy and needs a tutor",
+  ])("does not mistake ordinary words for childcare: %s", (text) => {
+    expect(moderateContent(text, guardianTutoring).kind).toBe("clean");
+  });
+
+  it.each([
+    "Tutor for my child, and babysit her after the lesson",
+    "Tutoring plus babysitting for my kids on Fridays",
+    "Need a nanny who can also tutor my children",
+    "Tutor my kids then watch my kids until I get home",
+    "Math tutor who can take care of the children afterwards",
+    "Tutor for my child, then daycare pickup",
+    "Tutoring, and a sitter for the kids after",
+  ])("still rejects childcare: %s", (text) => {
+    const r = moderateContent(text, guardianTutoring);
+    expect(r.kind).toBe("rejected");
+    expect(r.kind === "rejected" && r.reason).toMatch(/Childcare/);
+  });
+
+  it("still rejects contact details", () => {
+    expect(
+      moderateContent("Tutor for my child, call me at 555-123-4567", guardianTutoring).kind,
+    ).toBe("rejected");
+  });
+});
+
+describe("moderateContent — a child without the guardian's tick", () => {
+  it.each([
+    "My child needs a math tutor for 6th grade fractions, online twice a week",
+    "Tutor needed for my kid: reading practice, about an hour per session",
+    "Math tutor wanted.\nIt is for my kids, both in middle school",
+  ])("rejects tutoring for a child: %s", (text) => {
+    for (const context of [
+      undefined,
+      { categorySlug: "tutoring", forMinor: false },
+      { categorySlug: "other", forMinor: true },
+    ]) {
+      const r = moderateContent(text, context);
+      expect(r.kind).toBe("rejected");
+      expect(r.kind === "rejected" && r.reason).toMatch(/tick the box/);
+    }
+  });
+
+  it.each([
+    "Need someone to babysit my kids",
+    "Babysitting needed for my kids on Saturday",
+    "Looking for a babysitter this weekend",
+    "Need someone to watch my kids after school",
+  ])("rejects childcare outside Tutoring: %s", (text) => {
+    expect(moderateContent(text).kind).toBe("rejected");
+  });
+
+  it("still allows a tutoring post that doesn't mention a child", () => {
+    expect(
+      moderateContent(
+        "Looking for a calculus tutor, two online sessions before my exam",
+        { categorySlug: "tutoring", forMinor: false },
+      ).kind,
+    ).toBe("clean");
   });
 });

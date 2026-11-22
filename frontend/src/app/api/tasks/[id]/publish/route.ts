@@ -20,6 +20,8 @@ interface TaskRow {
   status: TaskStatus;
   title: string;
   description: string;
+  for_minor: boolean;
+  category_slug: string | null;
 }
 
 export async function POST(
@@ -30,7 +32,10 @@ export async function POST(
     const auth = await requireAuth(req);
     const { id } = await params;
     const task = await queryOne<TaskRow>(
-      `SELECT id, requester_id, status, title, description FROM tasks WHERE id = $1`,
+      `SELECT t.id, t.requester_id, t.status, t.title, t.description, t.for_minor,
+              c.slug AS category_slug
+       FROM tasks t LEFT JOIN categories c ON c.id = t.category_id
+       WHERE t.id = $1`,
       [id],
     );
     if (!task) throw notFound("Task not found");
@@ -38,7 +43,10 @@ export async function POST(
 
     transitionTo(task.status, "pending_review");
 
-    const moderation = moderateContent(`${task.title} ${task.description}`);
+    const moderation = moderateContent(`${task.title} ${task.description}`, {
+      categorySlug: task.category_slug,
+      forMinor: task.for_minor,
+    });
 
     if (moderation.kind === "clean") {
       await execute(

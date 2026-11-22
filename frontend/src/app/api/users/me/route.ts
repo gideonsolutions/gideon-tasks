@@ -13,13 +13,14 @@ const UpdateSchema = z.object({
 });
 
 async function fetchUser(id: string) {
-  const u = await queryOne<Record<string, unknown> & { password_hash: string }>(
-    `SELECT * FROM users WHERE id = $1`,
-    [id],
-  );
+  const u = await queryOne<
+    Record<string, unknown> & { password_hash: string; background_check_note: unknown }
+  >(`SELECT * FROM users WHERE id = $1`, [id]);
   if (!u) throw notFound("User not found");
-  const { password_hash: _omit, ...rest } = u;
+  // The background-check note is for admins only.
+  const { password_hash: _omit, background_check_note: _note, ...rest } = u;
   void _omit;
+  void _note;
   return rest;
 }
 
