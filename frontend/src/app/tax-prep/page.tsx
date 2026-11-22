@@ -11,6 +11,13 @@ import {
   TAX_PREP_SLUG,
 } from "@/lib/constants";
 import { formatCents } from "@/lib/utils/format";
+import { documentsEnabled } from "@/server/documents/storage";
+import {
+  MAX_DOCUMENT_BYTES,
+  MAX_DOCUMENTS_PER_TASK,
+  PROOF_RETENTION_DAYS,
+  TASK_DOCUMENT_RETENTION_DAYS,
+} from "@/server/documents/rules";
 
 export const metadata = {
   title: "Tax Prep — Gideon Tasks",
@@ -52,6 +59,14 @@ const PTIN_WHO_NEEDS_URL =
 const FORM_8554_URL = "https://www.irs.gov/pub/irs-pdf/f8554.pdf";
 /** "Use Form 2848 to authorize an individual to represent you before the IRS." */
 const FORM_2848_URL = "https://www.irs.gov/forms-pubs/about-form-2848";
+/** 16 CFR Part 314, the FTC Safeguards Rule. */
+const SAFEGUARDS_RULE_URL = "https://www.ecfr.gov/current/title-16/part-314";
+/**
+ * IRS Publication 4557 (Rev. 6-2024): "According to the FTC Safeguards Rule,
+ * tax return preparers must create and enact security plans to protect
+ * client data."
+ */
+const PUB_4557_URL = "https://www.irs.gov/pub/irs-pdf/p4557.pdf";
 /** Reporting a paid preparer to the IRS (Form 14157). */
 const IRS_PREPARER_MISCONDUCT_URL =
   "https://www.irs.gov/help/report-fraud/tax-return-preparer-misconduct";
@@ -67,6 +82,9 @@ function Step({ title, children }: { title: string; children: React.ReactNode })
 }
 
 export default function TaxPrepPage() {
+  // Read when the page is built, so the page describes document sharing only
+  // in a deployment where storage is set up.
+  const documents = documentsEnabled();
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -134,6 +152,8 @@ export default function TaxPrepPage() {
               or other account numbers in a task, application, question or
               message. Tasks and questions are public. A post or message with a
               Social Security number or ITIN in it is rejected.
+              {documents &&
+                " Once you book a preparer, share documents in the task's Documents section instead."}
             </Step>
             <Step title="Set the price and deadline.">
               You set either what the preparer receives or the total you pay,
@@ -167,31 +187,83 @@ export default function TaxPrepPage() {
           </ol>
         </section>
 
-        <section
-          id="documents"
-          className="rounded-lg border border-amber-200 bg-amber-50 p-5 space-y-3"
-        >
-          <h2 className="text-xl font-bold text-gray-900">
-            Getting your documents to the preparer
-          </h2>
-          <p className="text-gray-800">
-            Gideon Tasks doesn&apos;t hold tax documents. There is no upload,
-            and messages reject links, email addresses and phone numbers, so
-            you can&apos;t send documents through the site.
-          </p>
-          <p className="text-gray-800">
-            What works today is meeting in person. Choose In person and enter
-            a public place, such as a library; the address is shown on the
-            task, so never give a home address. Bring your documents to the
-            session and take them home with you. If the preparer needs your
-            Social Security number for the return, give it to them there, not
-            in a message.
-          </p>
-          <p className="text-gray-800">
-            If you choose Remote, the site gives you and the preparer no way to
-            exchange documents.
-          </p>
-        </section>
+        {documents ? (
+          <section
+            id="documents"
+            className="rounded-lg border border-gray-200 bg-white p-5 space-y-3"
+          >
+            <h2 className="text-xl font-bold text-gray-900">
+              Sharing documents with the preparer
+            </h2>
+            <p className="text-gray-700">
+              Once you book a preparer, the task page has a Documents section.
+              You and the preparer can each upload files there, and download
+              the other&apos;s: PDF, JPEG, PNG or HEIC, up to{" "}
+              {MAX_DOCUMENT_BYTES / 1024 / 1024} MB each and{" "}
+              {MAX_DOCUMENTS_PER_TASK} files per task. You can delete your own
+              files at any time.
+            </p>
+            <ul className="list-disc pl-5 space-y-2 text-gray-700">
+              <li>
+                <strong className="text-gray-900">Who can see them.</strong>{" "}
+                Only you and the preparer booked on the task. Not other
+                preparers who applied, and not the public. A Gideon Tasks
+                admin can open them only while a dispute is open on the task,
+                and every time one does is recorded in our audit log.
+              </li>
+              <li>
+                <strong className="text-gray-900">How they are kept.</strong>{" "}
+                Files go straight from your browser to private storage, and
+                come back only through the site, to someone signed in who is
+                allowed to see them. We record every upload, download and
+                deletion, but never what a file contains.
+              </li>
+              <li>
+                <strong className="text-gray-900">When they are deleted.</strong>{" "}
+                Every file on a task is deleted automatically{" "}
+                {TASK_DOCUMENT_RETENTION_DAYS} days after the task is
+                completed, cancelled or resolved. Download anything you want to
+                keep before then.
+              </li>
+              <li>
+                Upload documents there, never in a message: messages are not
+                private storage, and a Social Security number in one is
+                rejected.
+              </li>
+            </ul>
+            <p className="text-gray-700">
+              You can still meet in person at a public place, such as a
+              library, instead. The address is shown on the task, so never give
+              a home address.
+            </p>
+          </section>
+        ) : (
+          <section
+            id="documents"
+            className="rounded-lg border border-amber-200 bg-amber-50 p-5 space-y-3"
+          >
+            <h2 className="text-xl font-bold text-gray-900">
+              Getting your documents to the preparer
+            </h2>
+            <p className="text-gray-800">
+              Gideon Tasks doesn&apos;t hold tax documents. There is no upload,
+              and messages reject links, email addresses and phone numbers, so
+              you can&apos;t send documents through the site.
+            </p>
+            <p className="text-gray-800">
+              What works today is meeting in person. Choose In person and enter
+              a public place, such as a library; the address is shown on the
+              task, so never give a home address. Bring your documents to the
+              session and take them home with you. If the preparer needs your
+              Social Security number for the return, give it to them there, not
+              in a message.
+            </p>
+            <p className="text-gray-800">
+              If you choose Remote, the site gives you and the preparer no way to
+              exchange documents.
+            </p>
+          </section>
+        )}
 
         <section className="rounded-lg border border-gray-200 bg-white p-5 space-y-3">
           <h2 className="text-xl font-bold text-gray-900">Filing it yourself</h2>
@@ -228,12 +300,34 @@ export default function TaxPrepPage() {
               too.
             </Step>
             <Step title="Have it recorded.">
-              Write to us through the{" "}
-              <a href={CONTACT_URL} className={link}>
-                Gideon Solutions contact page
-              </a>{" "}
-              with the email address of your account, your PTIN, and any
-              credential you hold. An admin looks you up in the IRS{" "}
+              {documents ? (
+                <>
+                  Sign in and send proof of your PTIN on the{" "}
+                  <Link href="/profile/preparer" className={link}>
+                    Tax Preparer page
+                  </Link>
+                  , such as the confirmation in your IRS Tax Pro Account or
+                  your PTIN letter, and proof of any credential you hold: your
+                  enrollment card, CPA license or bar admission. Only you and
+                  our admins can see these files, and each is deleted{" "}
+                  {PROOF_RETENTION_DAYS} days after we decide. You can also
+                  write to us through the{" "}
+                  <a href={CONTACT_URL} className={link}>
+                    Gideon Solutions contact page
+                  </a>
+                  .
+                </>
+              ) : (
+                <>
+                  Write to us through the{" "}
+                  <a href={CONTACT_URL} className={link}>
+                    Gideon Solutions contact page
+                  </a>{" "}
+                  with the email address of your account, your PTIN, and any
+                  credential you hold.
+                </>
+              )}{" "}
+              An admin looks you up in the IRS{" "}
               <a href={IRS_PREPARER_DIRECTORY_URL} className={link}>
                 Directory of Federal Tax Return Preparers with Credentials and
                 Select Qualifications
@@ -267,7 +361,19 @@ export default function TaxPrepPage() {
               <a href={SECTION_7216_CONSENT_URL} className={link}>
                 26 CFR 301.7216-3
               </a>
-              ).
+              ). As a paid preparer you are also covered by the FTC&apos;s{" "}
+              <a href={SAFEGUARDS_RULE_URL} className={link}>
+                Safeguards Rule (16 CFR Part 314)
+              </a>
+              , which asks for a written plan to protect client information;
+              the IRS explains what that means for preparers in{" "}
+              <a href={PUB_4557_URL} className={link}>
+                Publication 4557, Safeguarding Taxpayer Data
+              </a>
+              . These duties are yours. Gideon Tasks keeps task files private
+              to you and the filer and deletes them on schedule, but that
+              doesn&apos;t meet them for you: whatever you download is yours to
+              protect.
             </Step>
             <Step title="Get paid.">
               Before you can start a booked task, set up payouts with Stripe on
@@ -328,7 +434,10 @@ export default function TaxPrepPage() {
             <a href={FORM_2848_URL} className={link}>
               Form 2848
             </a>
-            . Bring the notice to an in-person session at a public place.
+            .{" "}
+            {documents
+              ? "Share the notice in the task's Documents section once you book, or bring it to an in-person session at a public place."
+              : "Bring the notice to an in-person session at a public place."}
           </p>
         </section>
 

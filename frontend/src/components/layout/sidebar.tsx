@@ -11,6 +11,7 @@ const navItems = [
   { href: "/profile", label: "My Profile" },
   { href: "/profile/payment", label: "Payment Card" },
   { href: "/profile/stripe", label: "Stripe Connect" },
+  { href: "/profile/preparer", label: "Tax Preparer" },
   { href: "/invites", label: "Invites" },
   { href: "/attestations", label: "Attestations" },
 ];
@@ -20,6 +21,7 @@ const adminItems = [
   { href: "/admin/disputes", label: "Disputes" },
   { href: "/admin/audit-log", label: "Audit Log" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/verification", label: "Verification" },
 ];
 
 export function Sidebar() {

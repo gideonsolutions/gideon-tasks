@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { taxRequirement } from "@/lib/constants";
+import { useDocumentsEnabled } from "@/lib/hooks/use-documents-enabled";
+import { TASK_DOCUMENT_RETENTION_DAYS } from "@/server/documents/rules";
 
 /**
  * The rules for Tax Prep and IRS Notices & Representation, on the task's page
@@ -14,6 +18,7 @@ export function TaxPrepNotice({
   inForm?: boolean;
 }) {
   const requirement = taxRequirement(categorySlug);
+  const documentsEnabled = useDocumentsEnabled(!requirement);
   if (!requirement) return null;
   return (
     <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 space-y-2">
@@ -34,6 +39,20 @@ export function TaxPrepNotice({
           Never put a Social Security number, ITIN, tax documents or account
           numbers in the task or its messages. Tasks are public.
         </li>
+        {documentsEnabled ? (
+          <li>
+            Once a tasker is booked, you and they can share documents in the
+            task&apos;s Documents section. Only the two of you can see them,
+            and they are deleted {TASK_DOCUMENT_RETENTION_DAYS} days after the
+            task closes.
+          </li>
+        ) : (
+          <li>
+            Gideon Tasks doesn&apos;t hold tax documents and has no upload. To
+            hand over documents, meet in person at a public place, such as a
+            library.
+          </li>
+        )}
         {requirement === "ptin" ? (
           <li>
             Only preparers whose current PTIN Gideon Tasks has recorded can
@@ -46,11 +65,6 @@ export function TaxPrepNotice({
             return prepared, post in Tax Prep instead.
           </li>
         )}
-        <li>
-          Gideon Tasks doesn&apos;t hold tax documents and has no upload. To
-          hand over documents, meet in person at a public place, such as a
-          library.
-        </li>
       </ul>
       <p>
         <Link

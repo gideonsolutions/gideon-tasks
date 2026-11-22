@@ -9,6 +9,7 @@ import { TaskActions } from "@/components/tasks/task-actions";
 import { ApplyForm } from "@/components/applications/apply-form";
 import { BackgroundCheckRequired } from "@/components/applications/background-check-required";
 import { PreparerRequired } from "@/components/tax-prep/preparer-required";
+import { TaskDocuments } from "@/components/documents/task-documents";
 import { PayoutNotice } from "@/components/stripe/payout-notice";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -81,6 +82,7 @@ export default function TaskPage({
           </Link>
         )}
       </div>
+      <TaskDocuments task={task} />
       {task.status === "published" && user && task.requester_id !== user.id && (
         <Card>
           <CardHeader>

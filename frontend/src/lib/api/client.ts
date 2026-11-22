@@ -102,6 +102,30 @@ class ApiClient {
   delete<T>(path: string): Promise<T> {
     return this.request<T>(path, { method: "DELETE" });
   }
+
+  /**
+   * Fetches a file the API streams (a document download), with the same
+   * sign-in as every other call. The file never has a URL of its own.
+   */
+  async file(path: string): Promise<Blob> {
+    await this.refreshIfNeeded();
+    const token = this.getToken();
+    const response = await fetch(`${BASE_URL}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      let message = "Could not open the file";
+      try {
+        message = (await response.json()).error ?? message;
+      } catch {
+        // Not JSON
+      }
+      if (response.status === 401) useAuthStore.getState().logout();
+      throw { error: message, status: response.status } as ApiError;
+    }
+    return response.blob();
+  }
 }
 
 export const apiClient = new ApiClient();
