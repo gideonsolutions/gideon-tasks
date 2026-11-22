@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { handle, badRequest, trustLevelInsufficient } from "@/server/errors";
+import {
+  handle,
+  badRequest,
+  contentRejected,
+  trustLevelInsufficient,
+} from "@/server/errors";
 import { execute, query, queryOne } from "@/server/db";
 import { requireAuth, newId } from "@/server/auth";
 import { logAudit } from "@/server/audit";
@@ -17,6 +22,7 @@ import { platformVolumeCents } from "@/server/platform-volume";
 import { requireVerifiedEmail } from "@/server/email-verification";
 import { ok, parseBody } from "@/server/route-helpers";
 import { categorySlug, minorTaskProblem } from "@/server/minor-safeguards";
+import { containsSsnOrItin, SSN_REJECTION_REASON } from "@/server/moderation";
 
 export const runtime = "nodejs";
 
@@ -41,6 +47,10 @@ export async function POST(req: Request) {
   return handle(async () => {
     const auth = await requireAuth(req);
     const body = await parseBody(req, CreateSchema);
+    // Checked here as well as at publish, so a draft never stores one.
+    if (containsSsnOrItin(`${body.title}\n${body.description}\n${body.location_address ?? ""}`)) {
+      throw contentRejected(SSN_REJECTION_REASON);
+    }
 
     const emailVerified = await requireVerifiedEmail(auth.userId, "post");
     const maxActive = maxActivePosted(auth.trustLevel);

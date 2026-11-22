@@ -1,11 +1,18 @@
 import { z } from "zod";
-import { handle, notFound, forbidden, badRequest } from "@/server/errors";
+import {
+  handle,
+  notFound,
+  forbidden,
+  badRequest,
+  contentRejected,
+} from "@/server/errors";
 import { execute, queryOne } from "@/server/db";
 import { requireAuth } from "@/server/auth";
 import { logAudit } from "@/server/audit";
 import { MIN_TASK_PRICE_CENTS } from "@/server/fees";
 import { ok, parseBody } from "@/server/route-helpers";
 import { categorySlug, minorTaskProblem } from "@/server/minor-safeguards";
+import { containsSsnOrItin, SSN_REJECTION_REASON } from "@/server/moderation";
 
 export const runtime = "nodejs";
 
@@ -82,6 +89,11 @@ export async function PATCH(
       deadline: body.deadline ? new Date(body.deadline) : new Date(task.deadline),
       for_minor: body.for_minor ?? task.for_minor,
     };
+
+    // Checked here as well as at publish, so a draft never stores one.
+    if (containsSsnOrItin(`${next.title}\n${next.description}\n${next.location_address ?? ""}`)) {
+      throw contentRejected(SSN_REJECTION_REASON);
+    }
 
     if (next.price_cents < MIN_TASK_PRICE_CENTS) {
       throw badRequest(
